@@ -135,7 +135,7 @@ repositório.
 
 Ambiente e organização:
     O arquivo requirements.txt fixa as versões das dependências; o .gitignore
-    exclui .venv/, __pycache__/ e .streamlit/secrets.toml; as notas de
+    exclui `.venv/`, `__pycache__/` e `.streamlit/secrets.toml`; as notas de
     implantação estão em Code/deployment/. A estrutura de pastas segue o TDSP,
     descrita na seção 4.
 
