@@ -14,24 +14,28 @@ ONU. O componente per capita não entra nesta etapa.
 
 O projeto, no conjunto, é um dashboard da participação da indústria no PIB brasileiro: agropecuária, indústria e serviços; subsetores industriais quando a fonte permitir; série oficial do IBGE/SIDRA e do Ipeadata; comparação internacional do
 indicador de indústria de transformação no PIB a partir do World Development
-Indicators do World Bank.
+Indicators do World Bank. A comparação internacional é alimentada pelo CSV que
+o usuário envia no painel, a partir do export do DataBank disponível em
+`Data/raw/`.
 
 Não entra neste projeto (fora do escopo):
 
 - Microdados de empresas.
 - Recorte estadual ou municipal (o recorte é o Brasil).
-- Emprego, salário, informalidade ou CAGED/RAIS: o painel não exibe
-  essas séries nesta etapa (o emprego justifica o pilar Social, mas
-  ainda não é indicador operacional). O indicador 9.2.2 da ONU
-  (emprego na indústria sobre o emprego total) é o outro lado da meta
-  9.2 e é o caminho previsto para dar evidência ao pilar Social em
-  etapa posterior.
-- O componente per capita do indicador 9.2.1.
 - Avaliação causal de política industrial, crédito, câmbio ou tarifária.
 - Inflação, juros, balança comercial ou mercado financeiro como tema
   central.
 - Emissões, energia ou licenciamento ambiental da indústria.
 - Previsão ou modelo preditivo da desindustrialização.
+
+Não entra nesta etapa (adiado, não descartado):
+
+- Emprego, salário, informalidade ou CAGED/RAIS: o painel não exibe
+  essas séries (o emprego justifica o pilar Social, mas ainda não é
+  indicador operacional). O indicador 9.2.2 da ONU (emprego na
+  indústria sobre o emprego total) é o outro lado da meta 9.2 e é o
+  caminho previsto para dar evidência ao pilar Social.
+- O componente per capita do indicador 9.2.1.
 
 ## Objetivos
 
@@ -46,9 +50,9 @@ Não entra neste projeto (fora do escopo):
 
 ## Entregas por etapa
 
-Entregue nesta etapa: ambiente e estrutura TDSP; extração via API de IBGE/SIDRA e Ipeadata; scraping da página ODS 9 do Ipea em script separado, com CSV e TXT em `Data/raw/`; World Development Indicators exportado do DataBank para `Data/raw/` como exemplo; interface Streamlit interativa com cache e estado de sessão; serviço de upload e download de CSV na página Comparação internacional, em que o arquivo enviado passa a alimentar os filtros e os gráficos da comparação internacional; download das tabelas oficiais, do recorte filtrado e do CSV de exemplo, com fonte, código da série e data de extração anexados; nuvem de palavras e frequência a partir do conteúdo extraído da web, com recorte na meta selecionada.
+Entregue nesta etapa: ambiente e estrutura TDSP; controle de versão em Git, com repositório no GitHub e `.gitignore` do ambiente virtual e dos segredos; painel publicado no Streamlit Community Cloud a partir da branch main (link no início do [README.MD](../README.MD)); extração via API de IBGE/SIDRA e Ipeadata; scraping da página ODS 9 do Ipea em script separado, com CSV e TXT em `Data/raw/`; World Development Indicators exportado do DataBank para `Data/raw/` como exemplo; interface Streamlit interativa com cache e estado de sessão; serviço de upload e download de CSV na página Comparação internacional, em que o arquivo enviado passa a alimentar os filtros e os gráficos da comparação internacional; download das tabelas oficiais, do recorte filtrado e do CSV de exemplo, com fonte, código da série e data de extração anexados; nuvem de palavras e frequência a partir do conteúdo extraído da web, com recorte na meta selecionada.
 
-Previsto para etapas posteriores: série histórica trimestral do SIDRA; participação em volume, além da participação a preços correntes; emprego industrial (indicador 9.2.2) para dar evidência ao pilar Social; Banco Central/SGS como leitura de curto prazo; indicadores de complexidade (alta e média-alta intensidade tecnológica, 9.b.1); controle de versão e deploy publicado.
+Previsto para etapas posteriores: série histórica trimestral do SIDRA; participação em volume, além da participação a preços correntes; emprego industrial (indicador 9.2.2) para dar evidência ao pilar Social; Banco Central/SGS como leitura de curto prazo; indicadores de complexidade (alta e média-alta intensidade tecnológica, 9.b.1).
 
 Indicadores de sucesso: maior intervalo histórico possível nas APIs; comparação de agropecuária, indústria e serviços (e subsetores, quando possível); completude acima de 90% dos anos com valor na série do indicador 9.2.1 a partir de 1995 (exibida no painel); cada tabela baixada indica fonte, código da série e data de extração; soma setorial coerente com o valor adicionado a preços básicos, sem exigir 100% do PIB a preços de mercado; consistência com a literatura econômica no tema, verificada no Data Summary Report.
 

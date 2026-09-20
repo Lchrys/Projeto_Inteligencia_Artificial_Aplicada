@@ -18,17 +18,18 @@ estatísticas e relatórios especializados. O problema que a aplicação resolve
 a falta de um painel acessível que reúna essa trajetória setorial a partir de
 fontes oficiais.
 
-Metas e indicadores de sucesso: montar a série histórica da participação de
-agropecuária, indústria e serviços no PIB, no maior período disponível, com a
-indústria aberta em subsetores quando a fonte permitir. O projeto é
+Metas e indicadores de sucesso: comparar a participação de agropecuária,
+indústria e serviços no PIB, com a indústria aberta em subsetores quando a
+fonte permitir, e montar a série histórica da indústria de transformação no
+maior período disponível. O projeto é
 bem-sucedido se a série do indicador 9.2.1 tiver valor em mais de 90% dos anos
 a partir de 1995 (percentual exibido no painel); se cada tabela baixada
 indicar fonte, código da série e data de extração; se a soma setorial for
 coerente com o valor adicionado a preços básicos, e não com 100% do PIB a
 preços de mercado; se os dados do IBGE forem compatíveis com o Ipeadata e com
 a literatura; se as quebras metodológicas estiverem sinalizadas no painel; e
-se a aplicação exibir sempre a divulgação oficial mais recente, sem valores
-inseridos manualmente.
+se as séries consultadas por API exibirem sempre a divulgação oficial mais
+recente, sem valores inseridos manualmente.
 
 Pilar ESG: o projeto se insere no pilar Social (S), porque a retração da
 indústria de transformação reduz a oferta relativa de empregos formais e de
@@ -138,8 +139,16 @@ Ambiente e organização:
     implantação estão em Code/deployment/. A estrutura de pastas segue o TDSP,
     descrita na seção 4.
 
+Controle de versão e preparação para deploy:
+    O projeto é versionado com Git, na branch main, e publicado no
+    Streamlit Community Cloud a partir deste repositório (link no início
+    deste README). O ambiente de execução é reprodutível a partir de
+    requirements.txt em uma virtualenv, conforme a seção 5, e o ponto de
+    entrada do deploy é Scripts/app.py, descrito em
+    Code/deployment/README.md.
+
 Interface interativa:
-    São cinco páginas no menu lateral. Panorama setorial utiliza abas
+    São seis páginas no menu lateral. Panorama setorial utiliza abas
     (trimestral e subsetores); Série histórica dispõe de seletor de intervalo
     de anos; Comparação internacional dispõe de seleção múltipla de países e de
     indicadores, seletor de período, escolha do tipo de gráfico (evolução,
@@ -194,7 +203,7 @@ monitor-desindustrializacao/
         processed/             # dados limpos / preparados
         modeled/               # saídas de modelagem
     Code/
-        data_acquisition/      # extração via API (quando houver script à parte)
+        data_acquisition/      # extração fora do app (scraping do ODS 9)
         data_exploration/      # entendimento e EDA
         modeling/              # modelos
         deployment/            # empacotamento / notas de implantação
@@ -204,6 +213,7 @@ monitor-desindustrializacao/
         interface.py           # avisos, métrica e download
         pages/                 # páginas do painel
     requirements.txt
+    .gitignore                 # ambiente virtual, cache e segredos
     README.MD
 ```
 ### OBS: As pastas de exploração, modelagem e dados processados seguem reservadas para as próximas etapas; nesta entrega, o tratamento das séries e o cálculo dos indicadores ocorrem em Scripts/dados.py

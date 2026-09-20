@@ -78,7 +78,7 @@ Objetivo de uso: contextualizar o recorte do painel. O indicador 9.2.1 extraído
 
 # Fontes previstas
 
-Não entram na extração desta etapa. Permanecem mapeadas para trabalho posterior.
+Não entram na extração automatizada desta etapa. O Banco Central/SGS permanece mapeado para trabalho posterior; a literatura já é usada na validação cruzada, por leitura, e não por API.
 
 ## Banco Central do Brasil, SGS
 
