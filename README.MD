@@ -60,7 +60,7 @@ demais interessados no tema.
 # 2. Organização do projeto (CRISP-DM e TDSP)
 
 O projeto é estruturado pelos métodos CRISP-DM e TDSP, usados em conjunto. O
-CRISP-DM organiza o trabalho em seis fases; o TDSP, da Microsoft, acrescenta
+CRISP-DM organiza o trabalho em seis fases; o TDSP, acrescenta
 papéis de equipe e a estrutura de pastas adotada em Docs/, Data/, Code/ e
 Scripts/. As listas a seguir indicam o artefato correspondente a cada fase.
 
@@ -204,6 +204,7 @@ monitor-desindustrializacao/
     requirements.txt
     README.MD
 ```
+### OBS: As pastas de exploração, modelagem e dados processados seguem reservadas para as próximas etapas; nesta entrega, o tratamento das séries e o cálculo dos indicadores ocorrem em Scripts/dados.py
 
 # 5. Como rodar a aplicação (Windows) em ordem:
 
