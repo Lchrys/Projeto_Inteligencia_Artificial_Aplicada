@@ -1,0 +1,7 @@
+streamlit==1.64.0
+pandas==3.0.5
+requests==2.34.2
+ipeadatapy==0.1.9
+beautifulsoup4==4.15.0
+wordcloud==1.9.6
+matplotlib==3.11.2
