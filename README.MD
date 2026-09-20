@@ -5,7 +5,7 @@ PIB brasileiro, alinhado ao ODS 9.2 e ao pilar Social do ESG.
 
 ## Aplicação publicada: [(Streamlit)](https://projetointeligenciaartificialaplicada-bahhxlugo9rejaxkrd3njj.streamlit.app/)
 
-##### README elaborado com auxílio Claude Opus 3 (Medium)
+##### README elaborado com auxílio Claude Opus 5 (Medium)
 
 # 1. Identificação do problema de negócio
 
