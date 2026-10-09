@@ -16,7 +16,9 @@ empregos formais, e a perda de capacidade de inovar e de exportar bens mais
 sofisticados. A evidência oficial existe, porém permanece dispersa entre bases
 estatísticas e relatórios especializados. O problema que a aplicação resolve é
 a falta de um painel acessível que reúna essa trajetória setorial a partir de
-fontes oficiais.
+fontes oficiais. Nesta etapa o painel também expõe as mesmas séries e textos
+por uma API FastAPI local, preparando a consulta em linguagem natural na
+etapa de LLM.
 
 Metas e indicadores de sucesso: comparar a participação de agropecuária,
 indústria e serviços no PIB, com a indústria aberta em subsetores quando a
@@ -29,7 +31,8 @@ coerente com o valor adicionado a preços básicos, e não com 100% do PIB a
 preços de mercado; se os dados do IBGE forem compatíveis com o Ipeadata e com
 a literatura; se as quebras metodológicas estiverem sinalizadas no painel; e
 se as séries consultadas por API exibirem sempre a divulgação oficial mais
-recente, sem valores inseridos manualmente.
+recente, sem valores inseridos manualmente; e se as rotas da API FastAPI
+estiverem descritas em /docs.
 
 Pilar ESG: o projeto se insere no pilar Social (S), porque a retração da
 indústria de transformação reduz a oferta relativa de empregos formais e de
@@ -79,10 +82,10 @@ Entendimento dos dados:
     e a página ODS 9 do Ipea.
 
 Preparação dos dados:
-    Padronização das séries e cálculo das participações em Scripts/dados.py,
-    com os dados brutos em Data/raw/ e os limpos em Data/processed/, quando
-    houver arquivo intermediário. Cada ponto conserva fonte, código da série e
-    data de extração.
+    Padronização das séries e cálculo das participações em Scripts/nucleo.py
+    (o painel envolve essas funções com cache em Scripts/dados.py), com os
+    dados brutos em Data/raw/ e os recebidos por POST em Data/processed/.
+    Cada ponto conserva fonte, código da série e data de extração.
 
 Modelagem:
     Não há modelo preditivo, porque o charter exclui previsão. A fase
@@ -95,7 +98,8 @@ Avaliação:
     literatura, conforme as metas da seção 1.
 
 Implantação:
-    Painel Streamlit em Scripts/app.py, com notas em Code/deployment/.
+    Painel Streamlit em Scripts/app.py e API FastAPI em Code/api/main.py,
+    com notas em Code/deployment/.
 
 - TDSP:
 
@@ -104,17 +108,21 @@ Business Understanding:
     sucesso e interessados.
 
 Data Acquisition and Understanding:
-    Três formas de aquisição: API no painel (Scripts/dados.py), scraping em
-    script separado (Code/data_acquisition/scrape_ods9.py) e arquivo do
-    DataBank enviado pelo usuário na página Comparação internacional.
+    Três formas de aquisição das fontes oficiais: API (SIDRA e Ipeadata, em
+    Scripts/nucleo.py), scraping em script separado
+    (Code/data_acquisition/scrape_ods9.py) e arquivo do DataBank enviado pelo
+    usuário na página Comparação internacional. A API FastAPI do projeto
+    consulta as mesmas fontes; Início, Série histórica e Contexto ODS 9
+    consomem essas rotas, com leitura direta se o serviço não responder.
+    O POST /documentos grava textos em Data/processed/.
 
 Modeling:
     Produção dos indicadores de participação no PIB e das comparações, em
     ciclo com a aquisição quando a qualidade dos dados não for suficiente.
 
 Deployment:
-    Painel Streamlit, ambiente Python em requirements.txt e organização das
-    pastas, documentados em Code/deployment/.
+    Painel Streamlit, API FastAPI local, ambiente Python em requirements.txt
+    e organização das pastas, documentados em Code/deployment/.
 
 Customer Acceptance:
     Confronto da entrega com as metas da seção 1 e com o público descrito no
@@ -130,14 +138,15 @@ Papéis no eixo vertical:
 
 A aplicação é um painel Streamlit com múltiplas páginas: Scripts/app.py é o
 ponto de entrada (página Início) e as demais páginas estão em Scripts/pages/.
-A relação a seguir indica onde cada entrega desta etapa se encontra no
+O menu lateral agrupa as páginas em Painel, Comparações e contexto, e Dados e
+API. A relação a seguir indica onde cada entrega desta etapa se encontra no
 repositório.
 
 Ambiente e organização:
     O arquivo requirements.txt fixa as versões das dependências; o .gitignore
-    exclui `.venv/`, `__pycache__/` e `.streamlit/secrets.toml`; as notas de
-    implantação estão em Code/deployment/. A estrutura de pastas segue o TDSP,
-    descrita na seção 4.
+    exclui `.venv/`, `__pycache__/`, `.env` e `.streamlit/secrets.toml`; as
+    notas de implantação estão em Code/deployment/. A estrutura de pastas
+    segue o TDSP, descrita na seção 4.
 
 Controle de versão e preparação para deploy:
     O projeto é versionado com Git, na branch main, e publicado no
@@ -145,47 +154,59 @@ Controle de versão e preparação para deploy:
     deste README). O ambiente de execução é reprodutível a partir de
     requirements.txt em uma virtualenv, conforme a seção 5, e o ponto de
     entrada do deploy é Scripts/app.py, descrito em
-    Code/deployment/README.md.
+    Code/deployment/README.md. A API FastAPI roda só em ambiente local.
 
 Interface interativa:
-    São seis páginas no menu lateral. Panorama setorial utiliza abas
-    (trimestral e subsetores); Série histórica dispõe de seletor de intervalo
-    de anos; Comparação internacional dispõe de seleção múltipla de países e de
-    indicadores, seletor de período, escolha do tipo de gráfico (evolução,
-    comparação em um ano e composição setorial) e da transformação dos valores
-    (valor original, índice 100 e variação em pontos percentuais); Contexto
-    ODS 9 dispõe de seleção da meta e do escopo da nuvem de palavras.
+    O menu tem sete páginas em três seções. Panorama setorial utiliza abas
+    (trimestral e subsetores), mostra a participação de cada setor no PIB e
+    confere as somas (setores = VA; VA + impostos = PIB); Série histórica
+    dispõe de seletor de intervalo de anos e consome GET /serie/transformacao;
+    Comparação internacional
+    dispõe de seleção múltipla de países e de indicadores, seletor de período,
+    escolha do tipo de gráfico e da transformação dos valores; Contexto ODS 9
+    dispõe de seleção da meta, nuvem de palavras e aba Corpus (metas e
+    documentos do POST); API e dados mostra o status da API e envia documentos
+    pelo POST. Início, Série histórica e Contexto ODS 9 indicam a origem do
+    dado (API FastAPI ou leitura direta).
+
+API FastAPI:
+    Code/api/main.py expõe GET (saúde, série de transformação, World Bank,
+    metas do ODS 9, documentos e fatos/resumo) e POST /documentos. As rotas
+    estão descritas em Code/api/README.md e em /docs. O cliente está em
+    Scripts/cliente_api.py.
 
 Extração de conteúdo da web com Beautiful Soup:
     O script Code/data_acquisition/scrape_ods9.py é executado separadamente da
-    aplicação e grava Data/raw/ods9_metas.csv (uma linha por meta, com fonte e
-    data de extração) e Data/raw/ods9_corpus.txt (texto concatenado das metas).
+    aplicação e grava Data/raw/ods9_metas.csv e Data/raw/ods9_corpus.txt.
+    Não houve coleta nova nesta etapa. O Selenium não foi usado; a
+    justificativa está em Docs/Data_Summary_Report.md.
 
 Exibição do conteúdo extraído:
     A página Contexto ODS 9 apresenta o texto da meta selecionada, a nuvem de
-    palavras e a frequência de palavras em gráfico de barras. As estatísticas
-    das séries (participação no último ano, variação desde 1995 e completude do
-    recorte) são apresentadas na página Início e na Série histórica.
+    palavras, a frequência e, na aba Corpus, as metas junto dos documentos
+    enviados pela API. As estatísticas das séries vêm de GET /fatos/resumo na
+    página Início.
 
 Cache e estado de sessão:
     As funções de carga em Scripts/dados.py utilizam st.cache_data, com tempo
-    de expiração de uma hora nas consultas de API. O arquivo CSV enviado pelo
-    usuário é mantido em st.session_state na página Comparação internacional e
-    permanece disponível durante a navegação entre as páginas, juntamente com
-    os filtros selecionados.
+    de expiração de uma hora nas consultas de SIDRA e Ipeadata, envolvendo
+    Scripts/nucleo.py. As respostas da API FastAPI também entram em cache.
+    O arquivo CSV enviado pelo usuário é mantido em st.session_state na página
+    Comparação internacional.
 
 Serviço de upload e download de arquivos:
     O componente st.file_uploader, na página Comparação internacional, recebe o
     CSV do DataBank, que passa a alimentar os filtros, os gráficos e a tabela.
     Para download, a aplicação disponibiliza o CSV de exemplo, o recorte
     filtrado, as tabelas do SIDRA e do Ipeadata (com fonte, código da série e
-    data de extração anexados) e o arquivo TXT do texto extraído do Ipea.
+    data de extração anexados), o arquivo TXT do texto extraído do Ipea e o
+    recorte do corpus na aba Corpus.
 
 Documentação do projeto:
-    Docs/Project_Charter.md apresenta escopo, objetivos, entregas, stakeholders
-    e riscos; Docs/Data_Summary_Report.md apresenta a hierarquia das fontes, as
-    ressalvas de método e a ficha de cada fonte com o respectivo objetivo de
-    uso.
+    Docs/Project_Charter.md apresenta escopo, objetivos, entregas, preparação
+    para IA, stakeholders e riscos; Docs/Data_Summary_Report.md apresenta a
+    hierarquia das fontes, as ressalvas de método, a decisão sobre Selenium e
+    a ficha de cada fonte com o respectivo objetivo de uso.
 
 # 4. Estrutura de diretórios
 
@@ -200,23 +221,26 @@ monitor-desindustrializacao/
         Referencias.md
     Data/
         raw/                   # dados brutos
-        processed/             # dados limpos / preparados
+        processed/             # POST /documentos
         modeled/               # saídas de modelagem
     Code/
+        api/                   # FastAPI local
         data_acquisition/      # extração fora do app (scraping do ODS 9)
         data_exploration/      # entendimento e EDA
         modeling/              # modelos
         deployment/            # empacotamento / notas de implantação
     Scripts/
         app.py                 # visão geral do dashboard Streamlit
-        dados.py               # carga, transformação e corpus
+        nucleo.py              # carga e transformação (sem Streamlit)
+        dados.py               # cache Streamlit sobre nucleo.py
+        cliente_api.py         # GET na FastAPI com fallback
         interface.py           # avisos, métrica e download
         pages/                 # páginas do painel
     requirements.txt
     .gitignore                 # ambiente virtual, cache e segredos
     README.MD
 ```
-### OBS: As pastas de exploração, modelagem e dados processados seguem reservadas para as próximas etapas; nesta entrega, o tratamento das séries e o cálculo dos indicadores ocorrem em Scripts/dados.py
+### OBS: As pastas de exploração e modelagem seguem reservadas para as próximas etapas; o tratamento das séries ocorre em Scripts/nucleo.py. Data/processed/ guarda os arquivos recebidos pela API.
 
 # 5. Como rodar a aplicação (Windows) em ordem:
 
@@ -225,5 +249,18 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 python Code/data_acquisition/scrape_ods9.py
+uvicorn Code.api.main:app --reload
+```
+
+Em outro terminal, com o mesmo ambiente virtual:
+
+```
 streamlit run Scripts/app.py
 ```
+
+A API fica em http://127.0.0.1:8000 e a documentação interativa em
+http://127.0.0.1:8000/docs. Com a API no ar, Início, Série histórica e
+Contexto ODS 9 mostram "Origem: API FastAPI". Sem ela, mostram
+"Origem: leitura direta" e continuam funcionando. A página API e dados
+avisa quando o serviço está fora. Exemplos de curl estão em
+Code/api/README.md.

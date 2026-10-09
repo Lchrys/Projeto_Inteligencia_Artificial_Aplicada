@@ -1,11 +1,13 @@
 # Data Acquisition (TDSP)
 
-A aquisição de dados do projeto tem três formas.
+A aquisição de dados do projeto tem três formas. O Selenium não entra nesta
+etapa; a decisão está em Docs/Data_Summary_Report.md.
 
 ## 1. API consultada pelo dashboard
 
 IBGE/SIDRA (tabela 1846) e Ipeadata (SCN10_VAITY10) são consultados ao vivo em
-Scripts/dados.py, com cache de uma hora.
+Scripts/nucleo.py. O painel envolve essas funções com cache de uma hora em
+Scripts/dados.py. A API FastAPI do projeto (Code/api/main.py) usa o mesmo núcleo.
 
 ## 2. Scraping em script separado
 

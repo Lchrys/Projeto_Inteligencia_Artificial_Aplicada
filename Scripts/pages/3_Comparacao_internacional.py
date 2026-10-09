@@ -3,7 +3,7 @@ import streamlit as st
 
 from dados import (
     ARQ_WB_CSV,
-    DATA_CONSULTA,
+    data_consulta,
     INDICADOR_WB,
     INDICADORES_WB,
     achatar_databank,
@@ -175,7 +175,8 @@ else:
     )
     st.caption(
         "Índice 100 e variação em pontos percentuais valem para "
-        "a evolução e a composição, porque dependem da série no tempo."
+        "a evolução e a composição, porque dependem da série no tempo. "
+        "A base é o primeiro ano com valor de cada série."
     )
     util = world_bank.dropna(subset=["value", "date"])
     if util.empty:
@@ -303,7 +304,7 @@ else:
         "Baixar recorte filtrado (CSV)",
         fonte="World Bank, World Development Indicators (DataBank)",
         codigo_serie=codigos_wb,
-        data_extracao=DATA_CONSULTA,
+        data_extracao=data_consulta(),
     )
 
 if not world_bank_base.empty:

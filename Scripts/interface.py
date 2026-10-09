@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from dados import ANO_QUEBRA_SCN
+from nucleo import completude_anual
 
 
 def configurar_pagina(titulo: str) -> None:
@@ -47,7 +48,18 @@ def aviso_quebra(inicio: int, fim: int) -> None:
         )
 
 
-def metrica_completude(serie: pd.Series) -> None:
+def metrica_completude(
+    serie: pd.Series,
+    anos=None,
+    inicio: int | None = None,
+    fim: int | None = None,
+) -> None:
+    if anos is not None and inicio is not None and fim is not None:
+        taxa = completude_anual(anos, inicio, fim)
+        if pd.isna(taxa):
+            return
+        st.metric("Completude do recorte", f"{taxa:.0%}")
+        return
     if serie.empty:
         return
     valores = pd.to_numeric(serie, errors="coerce")

@@ -73,6 +73,7 @@ st.markdown(
 st.caption(
     "O serviço de upload e download fica na página Comparação internacional: "
     "baixe o CSV de exemplo e envie-o no painel para filtrar, ver gráficos e "
-    "baixar o recorte. A página Contexto ODS 9 lê o scraping já gravado em "
-    "Data/raw/."
+    "baixar o recorte. Início, Série histórica e Contexto ODS 9 consomem a "
+    "API FastAPI quando ela está no ar e leem Data/raw/ ou as APIs oficiais "
+    "quando não está."
 )

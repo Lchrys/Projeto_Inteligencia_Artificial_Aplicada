@@ -1,7 +1,8 @@
 import pandas as pd
 import streamlit as st
 
-from dados import ANO_QUEBRA_SCN, CODIGO_IPEA, amostra_ipeadata, eixo_ano
+from cliente_api import obter, quadro, legenda_origem
+from dados import ANO_QUEBRA_SCN, CODIGO_IPEA, eixo_ano, fatos_resumo, serie_transformacao
 from interface import configurar_pagina
 
 URL_ODS9 = (
@@ -10,28 +11,8 @@ URL_ODS9 = (
 )
 
 
-def serie_transformacao() -> pd.DataFrame:
-    """Série anual do Ipeadata com as colunas ano e valor já numéricas."""
-    try:
-        ipeadata = amostra_ipeadata(CODIGO_IPEA)
-    except Exception as exc:
-        st.error(f"Falha no Ipeadata: {exc}")
-        return pd.DataFrame()
-    if ipeadata.empty or "YEAR" not in ipeadata.columns:
-        return pd.DataFrame()
-    if "VALUE ((% PIB))" in ipeadata.columns:
-        coluna = "VALUE ((% PIB))"
-    elif "VALUE" in ipeadata.columns:
-        coluna = "VALUE"
-    else:
-        return pd.DataFrame()
-    serie = pd.DataFrame(
-        {
-            "ano": pd.to_numeric(ipeadata["YEAR"], errors="coerce"),
-            "valor": pd.to_numeric(ipeadata[coluna], errors="coerce"),
-        }
-    )
-    return serie.dropna().sort_values("ano")
+def _fallback_serie() -> dict:
+    return {"dados": serie_transformacao().to_dict(orient="records")}
 
 
 def mostrar_inicio() -> None:
@@ -78,37 +59,48 @@ def mostrar_inicio() -> None:
 
     st.subheader("A trajetória brasileira")
 
-    serie = serie_transformacao()
+    try:
+        fatos, origem = obter("/fatos/resumo", fallback=fatos_resumo)
+        payload_serie, origem_serie = obter(
+            "/serie/transformacao", fallback=_fallback_serie
+        )
+    except Exception as exc:
+        st.error(f"Falha no Ipeadata: {exc}")
+        fatos, origem, payload_serie, origem_serie = {}, "leitura direta", {}, "leitura direta"
+
+    serie = quadro(payload_serie)
+    if not serie.empty and "ano" in serie.columns and "valor" in serie.columns:
+        serie["ano"] = pd.to_numeric(serie["ano"], errors="coerce")
+        serie["valor"] = pd.to_numeric(serie["valor"], errors="coerce")
+        serie = serie.dropna().sort_values("ano")
+
+    bloco = fatos.get("serie") if isinstance(fatos, dict) else None
+    if bloco:
+        c1, c2, c3 = st.columns(3)
+        c1.metric(
+            f"Transformação no PIB ({int(bloco['ultimo_ano'])})",
+            f"{bloco['ultimo_valor']:.1f}%",
+        )
+        if "variacao_desde_1995" in bloco:
+            c2.metric(
+                f"Variação desde {ANO_QUEBRA_SCN}",
+                f"{bloco['variacao_desde_1995']:+.1f} p.p.",
+            )
+        c3.metric("Máximo do período", f"{bloco['maximo']:.1f}%")
 
     if not serie.empty:
-        ultimo = serie.iloc[-1]
-        base = serie[serie["ano"] == ANO_QUEBRA_SCN]
         comparavel = serie[serie["ano"] >= ANO_QUEBRA_SCN]
         if comparavel.empty:
             comparavel = serie
-
-        c1, c2, c3 = st.columns(3)
-        c1.metric(
-            f"Transformação no PIB ({int(ultimo['ano'])})",
-            f"{ultimo['valor']:.1f}%",
-        )
-        if not base.empty:
-            variacao = ultimo["valor"] - float(base.iloc[0]["valor"])
-            c2.metric(
-                f"Variação desde {ANO_QUEBRA_SCN}",
-                f"{variacao:+.1f} p.p.",
-            )
-        c3.metric(
-            "Máximo do período",
-            f"{comparavel['valor'].max():.1f}%",
-        )
-
         st.line_chart(eixo_ano(comparavel.set_index("ano")[["valor"]]))
         st.caption(
             f"Série {CODIGO_IPEA} (Ipeadata, preços correntes), "
             f"de {ANO_QUEBRA_SCN} em diante, quando os níveis das Contas "
             "Nacionais passam a ser comparáveis."
         )
+
+    origem_pagina = origem if origem == origem_serie else f"{origem}; série: {origem_serie}"
+    legenda_origem(origem_pagina)
 
     with st.expander("Como ler os dados"):
         st.markdown(
@@ -117,7 +109,9 @@ def mostrar_inicio() -> None:
             "manufatura, objeto da desindustrialização na literatura.\n\n"
             "As séries do SIDRA e do Ipeadata estão a preços correntes: a "
             "participação no PIB também se move quando muda o preço relativo "
-            "dos setores, e não apenas o volume produzido."
+            "dos setores, e não apenas o volume produzido.\n\n"
+            "Os números desta página vêm de GET /fatos/resumo e o gráfico de "
+            "GET /serie/transformacao quando a API está no ar."
         )
 
     st.subheader("Páginas do painel")
@@ -126,13 +120,15 @@ def mostrar_inicio() -> None:
         (panorama, "Último trimestre do SIDRA, com os subsetores industriais."),
         (historico, "Série anual do Ipeadata, no maior período disponível."),
         (internacional, "World Bank, a partir do CSV enviado pelo usuário."),
-        (ods9, "Texto do Ipea, nuvem de palavras e frequência."),
+        (ods9, "Texto do Ipea, nuvem de palavras, frequência e corpus."),
+        (api_dados, "Status da API FastAPI e envio de textos pelo POST."),
         (fontes, "Links oficiais, hierarquia das fontes e ressalvas."),
     ]
 
     for comeco in (0, 3):
-        colunas = st.columns(3)
-        for col, (pagina, descricao) in zip(colunas, atalhos[comeco:comeco + 3]):
+        fatia = atalhos[comeco:comeco + 3]
+        colunas = st.columns(len(fatia))
+        for col, (pagina, descricao) in zip(colunas, fatia):
             with col:
                 st.page_link(pagina, width="stretch")
                 st.caption(descricao)
@@ -146,6 +142,13 @@ internacional = st.Page(
 )
 ods9 = st.Page("pages/4_Contexto_ODS9.py", title="Contexto ODS 9")
 fontes = st.Page("pages/5_Fontes_e_metodo.py", title="Fontes e método")
+api_dados = st.Page("pages/6_API_e_dados.py", title="API e dados")
 
-pg = st.navigation([inicio, panorama, historico, internacional, ods9, fontes])
+pg = st.navigation(
+    {
+        "Painel": [inicio, panorama, historico],
+        "Comparações e contexto": [internacional, ods9],
+        "Dados e API": [api_dados, fontes],
+    }
+)
 pg.run()
