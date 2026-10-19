@@ -8,18 +8,29 @@ from dados import (
     data_consulta,
     rotulos_periodos_sidra,
 )
-from interface import botao_download, configurar_pagina
-from nucleo import conferir_somas, participacao_setorial, participacao_subsetores
+from interface import botao_download, configurar_pagina, sobre_os_dados
+from nucleo import (
+    conferir_somas,
+    participacao_setorial,
+    participacao_subsetores,
+    participacao_transformacao,
+    periodos_sidra,
+    tabela_sidra_legivel,
+)
 
 configurar_pagina("Panorama setorial")
 
 st.title("Panorama setorial")
 st.caption(
-    "Contas Nacionais Trimestrais (SIDRA, tabela 1846, último trimestre "
-    "disponível). Agropecuária, indústria e serviços somam o valor adicionado "
-    "a preços básicos; valor adicionado mais impostos líquidos sobre produtos "
-    "é o PIB a preços de mercado. A transformação é um subsetor da indústria "
-    "(código 90693)."
+    "Como se divide o PIB brasileiro nos últimos quatro trimestres, "
+    "e quanto da indústria é transformação."
+)
+sobre_os_dados(
+    "IBGE/SIDRA, tabela 1846 (Contas Nacionais Trimestrais), últimos "
+    "quatro trimestres (`periodos/-4`). Agropecuária, indústria, serviços "
+    "e impostos líquidos somam o PIB a preços de mercado. A transformação "
+    "(código 90693) é um subsetor da indústria, não um quarto setor; entra "
+    "como 'dos quais'. A trajetória de longo prazo está na Série histórica."
 )
 
 try:
@@ -32,14 +43,20 @@ except Exception as exc:
     rotulos = {}
     st.error(f"Não foi possível consultar o SIDRA: {exc}")
 
-periodo = ""
-if not sidra_trimestral.empty and "D2C" in sidra_trimestral.columns:
-    periodo = str(sidra_trimestral["D2C"].iloc[0])
-rotulo_periodo = rotulos.get(periodo, periodo)
-if rotulo_periodo:
-    st.caption(f"Período: {rotulo_periodo} ({periodo})")
+janela = periodos_sidra(sidra_trimestral)
+if janela["inicio"]:
+    rotulo_inicio = rotulos.get(janela["inicio"], janela["rotulo_inicio"])
+    rotulo_fim = rotulos.get(janela["fim"], janela["rotulo_fim"])
+    if janela["inicio"] == janela["fim"]:
+        st.caption(f"Período: {rotulo_fim} ({janela['fim']})")
+    else:
+        st.caption(
+            f"Acumulado de {rotulo_inicio} a {rotulo_fim} "
+            f"({janela['inicio']}–{janela['fim']})."
+        )
 
-participacoes = participacao_setorial(sidra_trimestral, sidra_subsetores)
+participacoes = participacao_setorial(sidra_trimestral)
+transformacao = participacao_transformacao(sidra_trimestral, sidra_subsetores)
 subsetores = participacao_subsetores(sidra_trimestral, sidra_subsetores)
 somas = conferir_somas(sidra_trimestral)
 data_hoje = data_consulta()
@@ -58,11 +75,11 @@ def _fmt_diff(valor) -> str:
     return f"{valor:.2%}"
 
 
-aba_tri, aba_sub = st.tabs(["Trimestral", "Subsetores"])
+aba_tri, aba_sub = st.tabs(["Composição do PIB", "Subsetores"])
 
 with aba_tri:
     if participacoes.empty:
-        st.info("Sem dados setoriais neste trimestre.")
+        st.info("Sem dados setoriais neste intervalo.")
     else:
         colunas = st.columns(4)
         for coluna, linha in zip(colunas, participacoes.to_dict("records")):
@@ -71,12 +88,26 @@ with aba_tri:
                 _fmt_pct(linha["pct_pib"]),
                 help=f"% do PIB a preços de mercado (código {linha['codigo']})",
             )
+        if transformacao.get("pct_pib") is not None:
+            st.metric(
+                "Dos quais: transformação",
+                _fmt_pct(transformacao["pct_pib"]),
+                help=(
+                    "Participação da indústria de transformação no PIB "
+                    f"(código {transformacao['codigo']}). É subsetor da "
+                    "indústria, não um setor à parte."
+                ),
+            )
         grafico = participacoes.dropna(subset=["pct_pib"]).set_index("setor")[
             ["pct_pib"]
         ]
         if not grafico.empty:
             st.bar_chart(grafico, y="pct_pib")
-            st.caption("Participação no PIB a preços de mercado, último trimestre.")
+            st.caption(
+                "Participação no PIB a preços de mercado, acumulado dos "
+                "últimos quatro trimestres. A transformação não entra no "
+                "gráfico para não ser lida como um quarto setor."
+            )
 
         if somas["ok"]:
             st.success(
@@ -92,8 +123,12 @@ with aba_tri:
                 "VA + impostos e PIB (tolerância de 0,5%)."
             )
 
-        with st.expander("Tabela SIDRA (trimestral)"):
-            st.dataframe(sidra_trimestral, hide_index=True, width="stretch")
+        with st.expander("Tabela SIDRA (composição)"):
+            st.dataframe(
+                tabela_sidra_legivel(sidra_trimestral),
+                hide_index=True,
+                width="stretch",
+            )
 
         botao_download(
             participacoes,
@@ -101,7 +136,7 @@ with aba_tri:
             "dl_sidra_part",
             "Baixar participações (CSV)",
             fonte=fonte_sidra,
-            codigo_serie="90707;90705;90687;90691;90696;90693",
+            codigo_serie="90707;90705;90687;90691;90696;90706",
             data_extracao=data_hoje,
         )
         botao_download(
@@ -116,7 +151,7 @@ with aba_tri:
 
 with aba_sub:
     if subsetores.empty:
-        st.info("Sem subsetores da indústria neste trimestre.")
+        st.info("Sem subsetores da indústria neste intervalo.")
     else:
         colunas = st.columns(len(subsetores))
         for coluna, linha in zip(colunas, subsetores.to_dict("records")):
@@ -137,7 +172,11 @@ with aba_sub:
             width="stretch",
         )
         with st.expander("Tabela SIDRA (subsetores)"):
-            st.dataframe(sidra_subsetores, hide_index=True, width="stretch")
+            st.dataframe(
+                tabela_sidra_legivel(sidra_subsetores),
+                hide_index=True,
+                width="stretch",
+            )
         botao_download(
             subsetores,
             "sidra_participacao_subsetores.csv",

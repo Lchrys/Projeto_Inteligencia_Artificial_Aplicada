@@ -44,6 +44,29 @@ def limpar_cache_api() -> None:
     _consultar_api.clear()
 
 
+def enviar_arquivo(
+    caminho: str, nome: str, conteudo: bytes
+) -> dict | None:
+    """POST multipart. Devolve None se a API não responder; ValueError em 4xx."""
+    try:
+        resposta = requests.post(
+            f"{url_api()}{caminho}",
+            files={"arquivo": (nome, conteudo, "text/csv")},
+            timeout=30,
+        )
+    except requests.RequestException:
+        return None
+    if resposta.status_code >= 400:
+        detalhe = resposta.text
+        try:
+            corpo = resposta.json()
+            detalhe = str(corpo.get("detail", detalhe))
+        except ValueError:
+            pass
+        raise ValueError(detalhe)
+    return resposta.json()
+
+
 def _params_chave(params: dict | None) -> tuple:
     if not params:
         return ()

@@ -2,9 +2,9 @@
 
 # Revisão no TP3
 
-O TP3 não acrescenta fonte oficial nova. As páginas Início, Série histórica e Contexto ODS 9 passam a obter os mesmos dados pela API FastAPI do projeto (`GET /fatos/resumo`, `GET /serie/transformacao`, `GET /ods9/metas`, `GET /documentos`). Se a API não responder, `Scripts/cliente_api.py` lê direto de `Scripts/nucleo.py`. Cada página indica a origem.
+O TP3 não acrescenta fonte oficial nova. Início, Série histórica e Contexto ODS 9 obtêm os mesmos dados pela API FastAPI do projeto (`GET /fatos/resumo`, `GET /serie/transformacao`, `GET /ods9/metas`). A Comparação internacional envia o CSV do DataBank por `POST /world-bank` e consulta o envio em `GET /world-bank/{id}`. Se a API não responder, `Scripts/cliente_api.py` lê direto de `Scripts/nucleo.py`. Cada página indica a origem. O Panorama passa a somar os últimos quatro trimestres (`periodos/-4`). O CSV continua a ser enviado pelo usuário; nada é pré-carregado.
 
-Não houve coleta adicional com Beautiful Soup: o recorte (indicador 9.2.1 e as metas do ODS 9) já está coberto pelas Fontes 1 a 5. A página ODS 8 do Ipea, no mesmo layout, fica como possibilidade futura se o painel passar a documentar o pilar Social e o indicador 9.2.2. A decisão sobre Selenium está na seção própria, abaixo da Fonte 5.
+Os dados extraídos com Beautiful Soup (Fonte 5) foram aprimorados nesta etapa: as metas do ODS 9 passaram a ser servidas pela API (`GET /ods9/metas` e `GET /ods9/metas/{codigo}`), reunidas na aba Corpus da página Contexto ODS 9 e preparadas como base de Q&A e resumo para a etapa de LLM. O recorte (indicador 9.2.1 e as metas do ODS 9) já está coberto pelas Fontes 1 a 5. A página ODS 8 do Ipea, no mesmo layout, fica como possibilidade futura se o painel passar a documentar o pilar Social e o indicador 9.2.2. A decisão sobre Selenium está na seção própria, abaixo da Fonte 5.
 
 # Hierarquia das fontes
 
@@ -25,7 +25,7 @@ Valem para todo o painel. Detalhe e bibliografia em [Referencias.md](Referencias
 5. O painel cobre o componente "em proporção do PIB" do indicador 9.2.1; o componente per capita não entra nesta etapa.
 6. Só de 1995 em diante os níveis das Contas Nacionais brasileiras são comparáveis. Há quebras em 1989–90 e 1994–95 por mudança de referência, não por desindustrialização (Morceiro, 2021).
 
-Formas de extração: SIDRA (Fontes 1 e 2) e Ipeadata (Fonte 3) são consultados por API, ao vivo, com cache de uma hora. A página ODS 9 do Ipea (Fonte 5) é extraída por scraping em script separado. O World Bank (Fonte 4) entra por arquivo exportado do DataBank e guardado em `Data/raw/`. A API FastAPI do próprio projeto (`Code/api/main.py`) consulta essas mesmas fontes e recebe textos por POST /documentos, gravados em `Data/processed/documentos.csv`. Em nenhum caso há valor digitado à mão nas séries oficiais: as tabelas baixadas do painel registram fonte, código da série e data de extração.
+Formas de extração: SIDRA (Fontes 1 e 2) e Ipeadata (Fonte 3) são consultados por API, ao vivo, com cache de uma hora. A página ODS 9 do Ipea (Fonte 5) é extraída por scraping em script separado. O World Bank (Fonte 4) entra por arquivo exportado do DataBank: o exemplo fica em `Data/raw/`, e o usuário o envia no painel. A API FastAPI do próprio projeto (`Code/api/main.py`) consulta SIDRA e Ipeadata, lê as metas extraídas e recebe o CSV do DataBank por `POST /world-bank`, gravado em `Data/processed/world_bank_envios/`. Em nenhum caso há valor digitado à mão nas séries oficiais: as tabelas baixadas do painel registram fonte, código da série e data de extração.
 
 # Fonte 1: IBGE/SIDRA, Contas Nacionais Trimestrais
 
@@ -33,9 +33,9 @@ Fonte: IBGE, Sistema de Recuperação Automática (SIDRA), pesquisa "Contas Naci
 
 Tipo de dado: série temporal trimestral, estruturada e quantitativa. Pela ajuda da API Sidra (https://apisidra.ibge.gov.br/home/ajuda), o retorno é JSON ou XML, com nomes/códigos em texto e o campo "V" (número ou caractere especial). Unidade: milhões de reais. O descritor da tabela 1846 (https://sidra.ibge.gov.br/tabela/descricao/1846) lista setores e PIB a preços de mercado, alinhado a este recorte.
 
-Objetivo de uso: mostrar a estrutura setorial no trimestre mais recente, para separar o agregado indústria da transformação. A participação de cada setor (e da transformação) é o valor adicionado dividido pelo PIB a preços de mercado; o painel também mostra a participação no VA. Agropecuária + indústria + serviços não somam 100% desse PIB, porque os impostos líquidos sobre produtos ficam de fora do VA setorial. A conferência das somas, na página Panorama, verifica duas identidades da tabela 1846, com tolerância de 0,5% para arredondamento: agropecuária + indústria + serviços = VA (90705); VA + impostos (90706) = PIB (90707).
+Objetivo de uso: mostrar a estrutura setorial no acumulado dos últimos quatro trimestres, para separar o agregado indústria da transformação sem o recorte sazonal de um trimestre isolado. A participação de cada setor é o valor adicionado dividido pelo PIB a preços de mercado. Agropecuária + indústria + serviços não somam 100% desse PIB, porque os impostos líquidos sobre produtos ficam de fora do VA setorial; no gráfico do Panorama os impostos entram como quarto bloco, para fechar o PIB. A transformação não entra nesse gráfico: é subsetor da indústria e aparece como "dos quais". A conferência das somas, na página Panorama, verifica duas identidades da tabela 1846, com tolerância de 0,5% para arredondamento: agropecuária + indústria + serviços = VA (90705); VA + impostos (90706) = PIB (90707).
 
-O painel consulta o último trimestre disponível (`periodos/-1`) via API Agregados v3. É uma foto conjuntural: a trajetória de longo prazo, que é o objeto da desindustrialização, vem das Fontes 3 e 4. A série histórica trimestral fica para etapa posterior.
+O painel consulta os últimos quatro trimestres (`periodos/-4`) via API Agregados v3 e soma os valores de cada código. A trajetória de longo prazo, objeto da desindustrialização, vem das Fontes 3 e 4.
 
 # Fonte 2: IBGE/SIDRA, subsetores industriais (tabela 1846)
 
@@ -43,7 +43,7 @@ Fonte: a mesma tabela 1846. Os subsetores industriais já estão nessa tabela (t
 
 Tipo de dado: série temporal trimestral, estruturada e quantitativa. Contrato da API Sidra igual ao da Fonte 1.
 
-Objetivo de uso: comparar a indústria de transformação com os demais subsetores industriais. O painel consulta o último trimestre disponível e mostra a participação de cada subsetor na indústria total (90691) e no PIB (90707).
+Objetivo de uso: comparar a indústria de transformação com os demais subsetores industriais. O painel soma os últimos quatro trimestres e mostra a participação de cada subsetor na indústria total (90691) e no PIB (90707).
 
 # Fonte 3: Ipeadata
 
@@ -62,7 +62,7 @@ Validação cruzada: Morceiro (2021, p. 705–711) documenta a série oficial do
 
 Fonte: World Bank, World Development Indicators, exportado do DataBank (https://databank.worldbank.org/source/world-development-indicators). São utilizados indicadores de participação setorial no PIB (agropecuária NV.AGR.TOTL.ZS, indústria total NV.IND.TOTL.ZS, transformação NV.IND.MANF.ZS, serviços NV.SRV.TOTL.ZS), crescimento da transformação (NV.IND.MANF.KD.ZG) e exportações de alta tecnologia (TX.VAL.TECH.MF.ZS).
 
-Forma de extração: arquivo exportado à parte, não consulta de API no painel. O arquivo é `Data/raw/world_bank_setorial.csv`, com 10 economias (Brasil, Estados Unidos, China, Rússia, Índia, Itália, França, Reino Unido, Alemanha e Japão) × 6 indicadores, de 1960 a 2025: 3.960 observações, das quais 2.249 têm valor (57%). Essa taxa descreve o arquivo inteiro, inclusive países e anos fora do recorte comparável (Brasil antes do fim dos anos 1970, em que o DataBank grava zero no lugar de ausência, e anos sem divulgação). O critério de 90% vale para a série do indicador 9.2.1 a partir de 1995, no recorte que o usuário filtra; o painel exibe a completude desse recorte, não a do arquivo bruto. O rodapé do próprio export registra a atualização da base pelo World Bank em 13/07/2026. O painel não lê esse arquivo sozinho: ele fica em `Data/raw/` como exemplo para download; filtros, gráficos e tabela só aparecem depois do upload na página Comparação internacional. A escolha pelo arquivo segue o mesmo padrão do scraping: extração fora do app, dado em `Data/raw/`. Por isso a comparação internacional não depende da disponibilidade das APIs do SIDRA e do Ipeadata.
+Forma de extração: arquivo exportado à parte, não consulta de API no painel. O arquivo é `Data/raw/world_bank_setorial.csv`, com 10 economias (Brasil, Estados Unidos, China, Rússia, Índia, Itália, França, Reino Unido, Alemanha e Japão) × 6 indicadores, de 1960 a 2025: 3.960 observações, das quais 2.249 têm valor (57%). Essa taxa descreve o arquivo inteiro, inclusive países e anos fora do recorte comparável (Brasil antes do fim dos anos 1970, em que o DataBank grava zero no lugar de ausência, e anos sem divulgação). O critério de 90% vale para a série do indicador 9.2.1 a partir de 1995, no recorte que o usuário filtra; o painel exibe a completude desse recorte, não a do arquivo bruto. O rodapé do próprio export registra a atualização da base pelo World Bank em 13/07/2026. O painel não lê esse arquivo sozinho: ele fica em `Data/raw/` como exemplo para download; filtros, gráficos e tabela só aparecem depois do upload na página Comparação internacional. A extração do DataBank continua fora do app. A comparação internacional não depende da disponibilidade das APIs do SIDRA e do Ipeadata.
 
 Tipo de dado: série temporal anual, estruturada e quantitativa. O export do DataBank vem em formato largo (colunas `Country Name`, `Country Code`, `Series Name`, `Series Code` e uma coluna por ano no padrão `1960 [YR1960]`), com ausências gravadas como `..` e três linhas de rodapé no fim do arquivo. O painel converte para formato longo, descarta o rodapé e trata `..` como ausente. A ficha técnica de cada série está em `Data/raw/world_bank_setorial_metadata.csv`: unidade, periodicidade anual, método de agregação, limitações e licença CC BY 4.0.
 
@@ -70,7 +70,9 @@ Objetivo de uso: comparar a trajetória brasileira com a de outros países nos i
 
 Qualidade dos dados, dois problemas identificados e tratados. Primeiro: o DataBank grava `0` onde o dado não existe em séries de participação, e o Brasil aparece com 0% de 1960 até o fim dos anos 1970; o painel converte esses zeros em ausência nos indicadores `.ZS`, para não desenhar uma queda que não existe. Segundo: a transformação brasileira cai de 23,7% para 14,5% do PIB entre 1994 e 1995 no World Bank, e há outro salto entre 1989 e 1990: são mudanças de referência das Contas Nacionais, não desindustrialização. Só de 1995 em diante os níveis são comparáveis, e o painel avisa quando o período selecionado atravessa esse ano. Esse é o risco de revisão metodológica previsto no Project Charter, agora materializado no dado.
 
-Divergência entre fontes do mesmo conceito: para 1981 o World Bank reporta 34,4% de transformação no PIB brasileiro, enquanto o Ipeadata (Fonte 3) trabalha em outro nível na mesma época: a série anual do SCN parte de 19,9% em 1947 e chega a 11,8% em 2025. As duas medem o indicador 9.2.1, mas com classificação e vintage diferentes. A comparação entre elas é de tendência, não de nível.
+Divergência entre fontes do mesmo conceito: para 1981 o World Bank reporta 34,4% de transformação no PIB brasileiro (`NV.IND.MANF.ZS` no CSV de exemplo) e o Ipeadata (SCN10_VAITY10) reporta 33,2% no mesmo ano — níveis próximos. A série do Ipeadata parte de 19,9% em 1947. Onde os níveis se afastam (por exemplo no entorno de 1994–95, por mudança de referência), a comparação entre as duas fontes é de tendência, não de ponto a ponto.
+
+Último ano da série: a extração de outubro de 2026 da SCN10_VAITY10 vai até 2025 (11,8%). O SCN Anual do IBGE sai com defasagem de cerca de dois anos, então o ponto de 2025 deve ser lido como preliminar (Contas Nacionais Trimestrais), não como dado anual definitivo. O painel exibe o último ano devolvido pela API, com fonte e data de extração; não insere valor à mão.
 
 # Fonte 5: Ipea, página ODS 9 (web scraping)
 
@@ -94,9 +96,9 @@ Usar um navegador automatizado acrescentaria dependência de navegador e driver,
 
 # Dados recebidos pela API (POST)
 
-Não é fonte oficial nova. O `POST /documentos` valida título, texto, fonte e data (modelo Pydantic), gera um identificador e anexa a linha a `Data/processed/documentos.csv`. A aba Corpus da página Contexto ODS 9 junta esses textos às metas do ODS 9 (`GET /documentos`).
+Não é fonte oficial nova. O `POST /world-bank` valida o CSV do DataBank (colunas `Country Name`, `Country Code`, `Series Name`, `Series Code` e anos no padrão `1990 [YR1990]`), descarta o rodapé, converte para formato longo, gera um identificador e grava `Data/processed/world_bank_envios/{id}.csv`. A página Comparação internacional consulta esse envio em `GET /world-bank/{id}`. Sem a API, o painel processa o arquivo localmente.
 
-A API roda só em ambiente local (`uvicorn`). No Streamlit Community Cloud ela não sobe; as páginas Início, Série histórica e Contexto ODS 9 caem na leitura direta.
+A API roda só em ambiente local (`uvicorn`). No Streamlit Community Cloud ela não sobe; Início, Série histórica, Comparação internacional e Contexto ODS 9 caem na leitura direta.
 
 # Fontes previstas
 

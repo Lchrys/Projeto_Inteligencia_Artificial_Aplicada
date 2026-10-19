@@ -1,36 +1,84 @@
 import pandas as pd
 import streamlit as st
 
+from cliente_api import (
+    api_disponivel,
+    enviar_arquivo,
+    obter,
+    quadro,
+    legenda_origem,
+)
 from dados import (
     ARQ_WB_CSV,
     data_consulta,
     INDICADOR_WB,
     INDICADORES_WB,
-    achatar_databank,
     data_extracao_wb,
-    eixo_ano,
     transformar_pivot,
 )
-from interface import aviso_quebra, botao_download, configurar_pagina, metrica_completude
+from interface import (
+    aviso_quebra,
+    botao_download,
+    configurar_pagina,
+    grafico_linha,
+    metrica_completude,
+    sobre_os_dados,
+)
+from nucleo import ler_databank
 
-configurar_pagina("Comparação internacional")
+PAISES_PADRAO = ("BRA", "DEU", "CHN", "USA")
+CHAVES_FILTRO = (
+    "filtro_wb_paises",
+    "filtro_wb_indicadores",
+    "filtro_wb_anos",
+    "filtro_wb_ano_barra",
+    "filtro_wb_pais_composicao",
+)
+
+configurar_pagina("Comparação internacional", layout="wide")
 
 if "wb_usuario" not in st.session_state:
     st.session_state.wb_usuario = pd.DataFrame()
 if "wb_arquivo_id" not in st.session_state:
     st.session_state.wb_arquivo_id = None
+if "wb_origem" not in st.session_state:
+    st.session_state.wb_origem = None
+if "wb_envio_id" not in st.session_state:
+    st.session_state.wb_envio_id = None
+
+
+def _limpar_filtros() -> None:
+    for chave in CHAVES_FILTRO:
+        st.session_state.pop(chave, None)
+
+
+def _paises_padrao(opcoes: list[str]) -> list[str]:
+    escolhidos = [codigo for codigo in PAISES_PADRAO if codigo in opcoes]
+    return escolhidos or list(opcoes[:1])
+
+
+def _titulo_eixo(modo: str) -> str:
+    if modo == "Índice 100":
+        return "Índice (base 100)"
+    if modo == "Variação (p.p.)":
+        return "Variação (p.p.)"
+    return "% do PIB"
+
 
 st.title("Comparação internacional")
 st.caption(
-    "World Bank, World Development Indicators, exportado do "
-    "DataBank e guardado em Data/raw/world_bank_setorial.csv. A extração "
-    "é feita à parte; o painel não lê o arquivo sozinho. Baixe o exemplo "
-    "e envie-o abaixo para filtrar, ver gráficos e baixar o recorte. "
-    f"{INDICADOR_WB} é o indicador 9.2.1 (transformação % PIB) e "
-    "sustenta a comparação internacional. Crescimento da transformação "
-    "e exportações de alta tecnologia respondem a outra pergunta "
-    "(dinamismo e complexidade), e podem subir mesmo com a "
-    "participação no PIB em queda."
+    "Como a participação da indústria de transformação no PIB do Brasil "
+    "se compara à de outras economias."
+)
+sobre_os_dados(
+    "World Bank, World Development Indicators, exportado do DataBank "
+    f"(`{INDICADOR_WB}` é o indicador 9.2.1). Baixe o CSV de exemplo em "
+    "Data/raw/ e envie-o no campo abaixo: filtros, gráficos e tabela só "
+    "aparecem depois do upload. Com a API no ar, o arquivo vai para "
+    "POST /world-bank e os dados voltam de GET /world-bank/{id}. Sem a "
+    "API, o painel lê o CSV direto. Crescimento da transformação e "
+    "exportações de alta tecnologia medem dinamismo e complexidade, e "
+    "podem subir mesmo com a participação no PIB em queda."
 )
 
 if data_extracao_wb():
@@ -53,41 +101,62 @@ enviado = st.file_uploader(
     "Enviar CSV do DataBank",
     type=["csv"],
     key="upload_wb",
+    help="Envie o CSV de exemplo ou outro export do DataBank.",
 )
 if enviado is not None:
     chave = (enviado.name, enviado.size)
     if st.session_state.get("wb_arquivo_id") != chave:
+        conteudo = enviado.getvalue()
         try:
-            st.session_state.wb_usuario = achatar_databank(
-                pd.read_csv(enviado, dtype=str)
-            )
+            if api_disponivel():
+                criado = enviar_arquivo("/world-bank", enviado.name, conteudo)
+                if criado is None:
+                    quadro_wb = ler_databank(conteudo)
+                    origem = "leitura direta"
+                    envio_id = None
+                else:
+                    envio_id = criado["id"]
+                    payload, origem = obter(f"/world-bank/{envio_id}")
+                    quadro_wb = quadro(payload)
+                    if quadro_wb.empty:
+                        quadro_wb = ler_databank(conteudo)
+                        origem = "leitura direta"
+            else:
+                quadro_wb = ler_databank(conteudo)
+                origem = "leitura direta"
+                envio_id = None
+            st.session_state.wb_usuario = quadro_wb
             st.session_state.wb_arquivo_id = chave
-            for chave_filtro in (
-                "filtro_wb_paises",
-                "filtro_wb_indicadores",
-                "filtro_wb_anos",
-                "filtro_wb_ano_barra",
-                "filtro_wb_pais_composicao",
-            ):
-                st.session_state.pop(chave_filtro, None)
+            st.session_state.wb_origem = origem
+            st.session_state.wb_envio_id = envio_id
+            _limpar_filtros()
             st.success(
                 f"{len(st.session_state.wb_usuario)} observações "
                 "carregadas nesta sessão."
             )
-        except (ValueError, pd.errors.ParserError) as exc:
+        except ValueError as exc:
             st.error(f"Não foi possível usar o arquivo: {exc}")
             st.session_state.wb_usuario = pd.DataFrame()
             st.session_state.wb_arquivo_id = None
+            st.session_state.wb_origem = None
+            st.session_state.wb_envio_id = None
 
 world_bank_base = st.session_state.wb_usuario
+if enviado is not None:
+    st.caption(f"Arquivo ativo: {enviado.name} (enviado nesta sessão).")
+if st.session_state.wb_origem:
+    if st.session_state.wb_envio_id:
+        st.caption(f"Envio na API: `{st.session_state.wb_envio_id}`")
+    legenda_origem(st.session_state.wb_origem)
+
+escolhidos, indicadores = [], []
+world_bank = pd.DataFrame()
 
 if world_bank_base.empty:
     st.info(
         "Envie o CSV do DataBank para ver filtros, gráficos e a tabela. "
         "Use o botão acima para baixar o exemplo em Data/raw/."
     )
-    escolhidos, indicadores = [], []
-    world_bank = pd.DataFrame()
 else:
     nomes_pais = dict(
         zip(world_bank_base["country.id"], world_bank_base["country.value"])
@@ -100,22 +169,24 @@ else:
         )
     )
     opcoes_indicador = sorted(nomes_indicador)
+    indicadores_padrao = (
+        [INDICADOR_WB] if INDICADOR_WB in opcoes_indicador else opcoes_indicador[:1]
+    )
 
     escolhidos = st.multiselect(
         "Países",
         opcoes_pais,
-        default=[],
+        default=_paises_padrao(opcoes_pais),
         format_func=lambda codigo: nomes_pais.get(codigo, codigo),
         key="filtro_wb_paises",
     )
     indicadores = st.multiselect(
         "Indicadores",
         opcoes_indicador,
-        default=[],
+        default=indicadores_padrao,
         format_func=lambda codigo: nomes_indicador.get(codigo, codigo),
         key="filtro_wb_indicadores",
     )
-    world_bank = pd.DataFrame()
 
 if (not escolhidos or not indicadores) and not world_bank_base.empty:
     st.info("Escolha ao menos um país e um indicador.")
@@ -167,17 +238,24 @@ else:
         horizontal=True,
         key="filtro_wb_grafico",
     )
-    modo_valor = st.radio(
-        "Transformação",
-        ("Valor original", "Índice 100", "Variação (p.p.)"),
-        horizontal=True,
-        key="filtro_wb_transformacao",
-    )
-    st.caption(
-        "Índice 100 e variação em pontos percentuais valem para "
-        "a evolução e a composição, porque dependem da série no tempo. "
-        "A base é o primeiro ano com valor de cada série."
-    )
+    if modo_grafico == "Composição setorial":
+        modo_valor = "Valor original"
+        st.caption(
+            "Composição só em % do PIB. Índice 100 e variação em pontos "
+            "percentuais não se aplicam a um empilhamento de séries."
+        )
+    else:
+        modo_valor = st.radio(
+            "Transformação",
+            ("Valor original", "Índice 100", "Variação (p.p.)"),
+            horizontal=True,
+            key="filtro_wb_transformacao",
+        )
+        st.caption(
+            "Índice 100 e variação em pontos percentuais valem para a "
+            "evolução, porque dependem da série no tempo. A base é o "
+            "primeiro ano com valor de cada série."
+        )
     util = world_bank.dropna(subset=["value", "date"])
     if util.empty:
         st.warning("Os registros existem, mas os valores estão vazios.")
@@ -217,10 +295,18 @@ else:
                     )
                     continue
                 st.markdown(f"**{INDICADORES_WB.get(codigo, codigo)}**")
-                st.line_chart(eixo_ano(parte))
+                parte.index.name = "ano"
+                grafico_linha(
+                    parte,
+                    titulo_y=_titulo_eixo(modo_valor),
+                    altura=420,
+                )
         if not pivot.empty:
             pivot = transformar_pivot(pivot, modo_valor)
-            st.line_chart(eixo_ano(pivot))
+            pivot.index.name = "ano"
+            grafico_linha(
+                pivot, titulo_y=_titulo_eixo(modo_valor), altura=420
+            )
     elif modo_grafico == "Comparação num ano":
         anos_bar = sorted(util["date"].dropna().unique())
         if "filtro_wb_ano_barra" not in st.session_state:
@@ -271,7 +357,6 @@ else:
                 aggfunc="mean",
             )
             area = area.reindex(columns=nomes_comp)
-            area = transformar_pivot(area, modo_valor)
             if (
                 "NV.IND.TOTL.ZS" in indicadores
                 and "NV.IND.MANF.ZS" in indicadores
@@ -283,7 +368,8 @@ else:
             if area.empty or area.dropna(how="all").empty:
                 st.warning(f"Sem valores setoriais para {pais_comp}.")
             else:
-                st.area_chart(eixo_ano(area), stack=True)
+                area.index = [str(int(ano)) for ano in area.index]
+                st.area_chart(area, stack=True)
 
     visivel = world_bank.drop(columns=["decimal"], errors="ignore").copy()
     if "date" in visivel.columns:
@@ -313,4 +399,7 @@ if not world_bank_base.empty:
         st.session_state.wb_arquivo_id = (
             (enviado.name, enviado.size) if enviado is not None else None
         )
+        st.session_state.wb_origem = None
+        st.session_state.wb_envio_id = None
+        _limpar_filtros()
         st.rerun()

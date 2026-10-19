@@ -3,6 +3,7 @@
 Arquivos recebidos pela API FastAPI depois da validação, não séries oficiais
 novas.
 
-- `documentos.csv`: textos enviados por POST /documentos (id, fonte, url,
-  data, tipo, título e texto). A aba Corpus da página Contexto ODS 9 junta
-  essas linhas às metas do ODS 9.
+- `world_bank_envios/`: CSV do DataBank enviados por `POST /world-bank`, em
+  formato longo, um arquivo por identificador (`{id}.csv`). A página
+  Comparação internacional consulta esses envios em `GET /world-bank/{id}`.
+  O diretório fica de fora do Git (`.gitignore`).

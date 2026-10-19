@@ -11,19 +11,21 @@ from dados import (
     frequencia_palavras,
     imagem_nuvem,
 )
-from interface import botao_download, configurar_pagina
-from nucleo import carregar_documentos, documentos_ods9, filtrar_documentos
+from interface import botao_download, configurar_pagina, sobre_os_dados
+from nucleo import documentos_ods9, filtrar_documentos
 
 configurar_pagina("Contexto ODS 9")
 
 st.title("Contexto ODS 9")
 st.caption(
-    "Ipea, página ODS 9, extração com Beautiful Soup "
-    "(script Code/data_acquisition/scrape_ods9.py). Os arquivos "
-    "estão em Data/raw/. O indicador 9.2.1 (valor adicionado da "
-    "indústria em proporção do PIB) é o recorte numérico deste painel. "
-    "As metas vêm de GET /ods9/metas quando a API está no ar. A aba "
-    "Corpus reúne essas metas e os documentos enviados por POST /documentos."
+    "O que a meta 9.2 pede, e como a redação brasileira diverge da ONU."
+)
+sobre_os_dados(
+    "Texto extraído da página ODS 9 do Ipea com Beautiful Soup "
+    "(script Code/data_acquisition/scrape_ods9.py), gravado em Data/raw/. "
+    "O indicador 9.2.1 é o recorte numérico deste painel. As metas vêm de "
+    "GET /ods9/metas quando a API está no ar. A aba Corpus reúne o texto "
+    "dessas metas para busca e frequência de palavras."
 )
 
 aba_meta, aba_corpus = st.tabs(["Meta", "Corpus"])
@@ -31,10 +33,6 @@ aba_meta, aba_corpus = st.tabs(["Meta", "Corpus"])
 
 def _fallback_metas() -> dict:
     return {"dados": carregar_ods9().to_dict(orient="records")}
-
-
-def _fallback_documentos() -> dict:
-    return {"dados": carregar_documentos().to_dict(orient="records")}
 
 
 with aba_meta:
@@ -122,19 +120,11 @@ with aba_meta:
         legenda_origem(origem)
 
 with aba_corpus:
-    payload_docs, origem_docs = obter(
-        "/documentos", fallback=_fallback_documentos
-    )
-    enviados = quadro(payload_docs)
-    metas_docs = documentos_ods9()
-    if enviados.empty:
-        quadro_corpus = metas_docs
-    else:
-        quadro_corpus = pd.concat([metas_docs, enviados], ignore_index=True)
+    quadro_corpus = documentos_ods9()
     if quadro_corpus.empty:
         st.warning(
             "Não há textos para exibir. Confirme Data/raw/ods9_metas.csv "
-            "ou envie um documento pela página API e dados."
+            "ou rode: python Code/data_acquisition/scrape_ods9.py"
         )
     else:
         fontes = sorted(
@@ -161,7 +151,7 @@ with aba_corpus:
                 "corpus_textual.csv",
                 "dl_corpus",
                 "Baixar recorte (CSV)",
-                fonte="Metas ODS 9 (Ipea) e documentos enviados pela API",
+                fonte="Metas ODS 9 (Ipea)",
                 codigo_serie="ods9; documentos",
                 data_extracao=data_consulta(),
             )
@@ -176,7 +166,5 @@ with aba_corpus:
                         "Não há palavras suficientes depois das stopwords."
                     )
         st.caption(
-            "Metas do ODS 9 vêm do arquivo extraído; documentos enviados "
-            "vêm de GET /documentos quando a API está no ar."
+            "Metas do ODS 9 vêm do arquivo extraído em Data/raw/ods9_metas.csv."
         )
-        legenda_origem(origem_docs)

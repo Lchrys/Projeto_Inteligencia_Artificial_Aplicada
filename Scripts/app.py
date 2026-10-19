@@ -1,14 +1,13 @@
+from pathlib import Path
+
 import pandas as pd
 import streamlit as st
 
 from cliente_api import obter, quadro, legenda_origem
-from dados import ANO_QUEBRA_SCN, CODIGO_IPEA, eixo_ano, fatos_resumo, serie_transformacao
-from interface import configurar_pagina
+from dados import ANO_QUEBRA_SCN, CODIGO_IPEA, fatos_resumo, serie_transformacao
+from interface import configurar_pagina, grafico_linha, sobre_os_dados
 
-URL_ODS9 = (
-    "https://upload.wikimedia.org/wikipedia/commons/7/7f/"
-    "Objetivo_Desenvolvimento_Sustent%C3%A1vel_9_PT.webp"
-)
+ARQ_ODS9_IMG = Path(__file__).resolve().parent / "assets" / "ods9.webp"
 
 
 def _fallback_serie() -> dict:
@@ -26,7 +25,8 @@ def mostrar_inicio() -> None:
             "(ODS 9, indicador 9.2.1)"
         )
     with col_img:
-        st.image(URL_ODS9, width=120)
+        if ARQ_ODS9_IMG.exists():
+            st.image(str(ARQ_ODS9_IMG), width=120)
 
     col_problema, col_objetivo = st.columns(2)
     with col_problema:
@@ -92,7 +92,7 @@ def mostrar_inicio() -> None:
         comparavel = serie[serie["ano"] >= ANO_QUEBRA_SCN]
         if comparavel.empty:
             comparavel = serie
-        st.line_chart(eixo_ano(comparavel.set_index("ano")[["valor"]]))
+        grafico_linha(comparavel[["ano", "valor"]])
         st.caption(
             f"Série {CODIGO_IPEA} (Ipeadata, preços correntes), "
             f"de {ANO_QUEBRA_SCN} em diante, quando os níveis das Contas "
@@ -102,27 +102,25 @@ def mostrar_inicio() -> None:
     origem_pagina = origem if origem == origem_serie else f"{origem}; série: {origem_serie}"
     legenda_origem(origem_pagina)
 
-    with st.expander("Como ler os dados"):
-        st.markdown(
-            "**Indústria** (código 90691 no SIDRA) é o agregado, que inclui "
-            "extrativa, construção e utilities. **Transformação** (90693) é a "
-            "manufatura, objeto da desindustrialização na literatura.\n\n"
-            "As séries do SIDRA e do Ipeadata estão a preços correntes: a "
-            "participação no PIB também se move quando muda o preço relativo "
-            "dos setores, e não apenas o volume produzido.\n\n"
-            "Os números desta página vêm de GET /fatos/resumo e o gráfico de "
-            "GET /serie/transformacao quando a API está no ar."
-        )
+    sobre_os_dados(
+        "**Indústria** (código 90691 no SIDRA) é o agregado, que inclui "
+        "extrativa, construção e utilities. **Transformação** (90693) é a "
+        "manufatura, objeto da desindustrialização na literatura.\n\n"
+        "As séries do SIDRA e do Ipeadata estão a preços correntes: a "
+        "participação no PIB também se move quando muda o preço relativo "
+        "dos setores, e não apenas o volume produzido.\n\n"
+        "Os números desta página vêm de GET /fatos/resumo e o gráfico de "
+        "GET /serie/transformacao quando a API está no ar."
+    )
 
     st.subheader("Páginas do painel")
 
     atalhos = [
-        (panorama, "Último trimestre do SIDRA, com os subsetores industriais."),
+        (panorama, "PIB dos últimos quatro trimestres, com a transformação isolada."),
         (historico, "Série anual do Ipeadata, no maior período disponível."),
         (internacional, "World Bank, a partir do CSV enviado pelo usuário."),
         (ods9, "Texto do Ipea, nuvem de palavras, frequência e corpus."),
-        (api_dados, "Status da API FastAPI e envio de textos pelo POST."),
-        (fontes, "Links oficiais, hierarquia das fontes e ressalvas."),
+        (fontes, "Links oficiais, hierarquia das fontes, ressalvas e API local."),
     ]
 
     for comeco in (0, 3):
@@ -142,13 +140,12 @@ internacional = st.Page(
 )
 ods9 = st.Page("pages/4_Contexto_ODS9.py", title="Contexto ODS 9")
 fontes = st.Page("pages/5_Fontes_e_metodo.py", title="Fontes e método")
-api_dados = st.Page("pages/6_API_e_dados.py", title="API e dados")
 
 pg = st.navigation(
     {
         "Painel": [inicio, panorama, historico],
         "Comparações e contexto": [internacional, ods9],
-        "Dados e API": [api_dados, fontes],
+        "Método": [fontes],
     }
 )
 pg.run()

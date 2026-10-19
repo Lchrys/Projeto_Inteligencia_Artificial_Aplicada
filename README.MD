@@ -1,9 +1,11 @@
 # Monitor Brasileiro de Desindustrialização
 
-Dashboard (em construção) para acompanhar a participação da indústria no
-PIB brasileiro, alinhado ao ODS 9.2 e ao pilar Social do ESG.
+Painel para acompanhar a participação da indústria no PIB brasileiro,
+alinhado ao ODS 9.2 e ao pilar Social do ESG.
 
 Aplicação publicada: [(Streamlit)](https://projetointeligenciaartificialaplicada-bahhxlugo9rejaxkrd3njj.streamlit.app/)
+
+Este README foi redigido com apoio de inteligência artificial (Claude Opus 5.5) e revisado pelo autor do projeto.
 
 # 1. Identificação do problema de negócio
 
@@ -29,7 +31,7 @@ a partir de 1995 (percentual exibido no painel); se cada tabela baixada
 indicar fonte, código da série e data de extração; se a soma setorial for
 coerente com o valor adicionado a preços básicos, e não com 100% do PIB a
 preços de mercado; se os dados do IBGE forem compatíveis com o Ipeadata e com
-a literatura; se as quebras metodológicas estiverem sinalizadas no painel; e
+a literatura; se as quebras metodológicas estiverem sinalizadas no painel;
 se as séries consultadas por API exibirem sempre a divulgação oficial mais
 recente, sem valores inseridos manualmente; e se as rotas da API FastAPI
 estiverem descritas em /docs.
@@ -66,7 +68,7 @@ demais interessados no tema.
 # 2. Organização do projeto (CRISP-DM e TDSP)
 
 O projeto é estruturado pelos métodos CRISP-DM e TDSP, usados em conjunto. O
-CRISP-DM organiza o trabalho em seis fases; o TDSP, acrescenta
+CRISP-DM organiza o trabalho em seis fases; o TDSP acrescenta
 papéis de equipe e a estrutura de pastas adotada em Docs/, Data/, Code/ e
 Scripts/. As listas a seguir indicam o artefato correspondente a cada fase.
 
@@ -95,11 +97,13 @@ Modelagem:
 Avaliação:
     Verificação da cobertura da série, da procedência de cada valor, da
     coerência da soma setorial e da compatibilidade entre IBGE, Ipeadata e
-    literatura, conforme as metas da seção 1.
+    literatura, conforme as metas da seção 1. A página Fontes e método
+    calcula esses critérios e os exibe como atendidos ou não.
 
 Implantação:
     Painel Streamlit em Scripts/app.py e API FastAPI em Code/api/main.py,
-    com notas em Code/deployment/.
+    com notas em Code/deployment/. A fase de Avaliação aparece na página
+    Fontes e método, que verifica os critérios de sucesso do charter.
 
 - TDSP:
 
@@ -112,9 +116,10 @@ Data Acquisition and Understanding:
     Scripts/nucleo.py), scraping em script separado
     (Code/data_acquisition/scrape_ods9.py) e arquivo do DataBank enviado pelo
     usuário na página Comparação internacional. A API FastAPI do projeto
-    consulta as mesmas fontes; Início, Série histórica e Contexto ODS 9
-    consomem essas rotas, com leitura direta se o serviço não responder.
-    O POST /documentos grava textos em Data/processed/.
+    consulta as mesmas fontes; Início, Série histórica, Comparação
+    internacional e Contexto ODS 9 consomem essas rotas, com leitura
+    direta se o serviço não responder. O POST /world-bank grava o CSV
+    enviado pelo usuário em Data/processed/world_bank_envios/.
 
 Modeling:
     Produção dos indicadores de participação no PIB e das comparações, em
@@ -136,10 +141,21 @@ Papéis no eixo vertical:
 
 # 3. Funcionalidades entregues nesta etapa
 
+Nesta etapa o painel passou a expor os dados por uma API FastAPI local.
+Antes, Início, Série histórica e Contexto ODS 9 liam SIDRA, Ipeadata e os
+arquivos em Data/raw/ direto; a Comparação internacional lia o CSV do
+DataBank no próprio Streamlit. Agora essas páginas consultam a FastAPI
+quando ela está no ar (GET /fatos/resumo, GET /serie/transformacao,
+GET /ods9/metas). O CSV da Comparação internacional continua a ser
+enviado pelo usuário; a mudança é o caminho: POST /world-bank recebe o
+arquivo, a API o valida e grava, e GET /world-bank/{id} devolve os dados
+para os gráficos. Se a API não responder, o painel volta à leitura
+direta.
+
 A aplicação é um painel Streamlit com múltiplas páginas: Scripts/app.py é o
 ponto de entrada (página Início) e as demais páginas estão em Scripts/pages/.
-O menu lateral agrupa as páginas em Painel, Comparações e contexto, e Dados e
-API. A relação a seguir indica onde cada entrega desta etapa se encontra no
+O menu lateral agrupa as páginas em Painel, Comparações e contexto, e Método.
+A relação a seguir indica onde cada entrega desta etapa se encontra no
 repositório.
 
 Ambiente e organização:
@@ -157,34 +173,40 @@ Controle de versão e preparação para deploy:
     Code/deployment/README.md. A API FastAPI roda só em ambiente local.
 
 Interface interativa:
-    O menu tem sete páginas em três seções. Panorama setorial utiliza abas
-    (trimestral e subsetores), mostra a participação de cada setor no PIB e
-    confere as somas (setores = VA; VA + impostos = PIB); Série histórica
-    dispõe de seletor de intervalo de anos e consome GET /serie/transformacao;
-    Comparação internacional
-    dispõe de seleção múltipla de países e de indicadores, seletor de período,
-    escolha do tipo de gráfico e da transformação dos valores; Contexto ODS 9
-    dispõe de seleção da meta, nuvem de palavras e aba Corpus (metas e
-    documentos do POST); API e dados mostra o status da API e envia documentos
-    pelo POST. Início, Série histórica e Contexto ODS 9 indicam a origem do
-    dado (API FastAPI ou leitura direta).
+    O menu tem seis páginas em três seções. Panorama setorial usa o acumulado
+    dos últimos quatro trimestres, mostra agropecuária, indústria, serviços e
+    impostos (que somam o PIB) e isola a transformação como "dos quais";
+    Série histórica dispõe de seletor de intervalo de anos e consome
+    GET /serie/transformacao; Comparação internacional recebe o CSV do
+    DataBank pelo upload (POST /world-bank e GET /world-bank/{id} quando a
+    API está no ar); Contexto ODS 9 dispõe de seleção da meta, nuvem de
+    palavras e aba Corpus; Fontes e método resume as fontes e o status da
+    API local. Início, Série histórica, Comparação internacional e Contexto
+    ODS 9 indicam a origem do dado (API FastAPI ou leitura direta).
 
 API FastAPI:
-    Code/api/main.py expõe GET (saúde, série de transformação, World Bank,
-    metas do ODS 9, documentos e fatos/resumo) e POST /documentos. As rotas
-    estão descritas em Code/api/README.md e em /docs. O cliente está em
-    Scripts/cliente_api.py.
+    Code/api/main.py reúne routers em Code/api/routers/ e modelos Pydantic
+    em Code/api/models.py (response_model em todas as rotas; POST /world-bank
+    devolve 201). A consulta de dados é GET (saúde, série de transformação,
+    World Bank por id, metas do ODS 9 e fatos/resumo). O envio de novos
+    dados é POST /world-bank: recebe o CSV do DataBank que a Comparação
+    internacional usa nos gráficos. As rotas estão descritas em
+    Code/api/README.md e em /docs. O cliente está em Scripts/cliente_api.py.
 
 Extração de conteúdo da web com Beautiful Soup:
     O script Code/data_acquisition/scrape_ods9.py é executado separadamente da
     aplicação e grava Data/raw/ods9_metas.csv e Data/raw/ods9_corpus.txt.
-    Não houve coleta nova nesta etapa. O Selenium não foi usado; a
+    Nesta etapa esses dados foram aprimorados: as metas do ODS 9 passaram a
+    ser servidas pela API (GET /ods9/metas e GET /ods9/metas/{codigo}),
+    reunidas na aba Corpus e preparadas como base de Q&A e resumo para a
+    etapa de LLM. Como nenhuma fonte exige interação dinâmica, a coleta
+    seguiu a orientação de manter a simplicidade, sem Selenium; a
     justificativa está em Docs/Data_Summary_Report.md.
 
 Exibição do conteúdo extraído:
     A página Contexto ODS 9 apresenta o texto da meta selecionada, a nuvem de
-    palavras, a frequência e, na aba Corpus, as metas junto dos documentos
-    enviados pela API. As estatísticas das séries vêm de GET /fatos/resumo na
+    palavras, a frequência e, na aba Corpus, as metas extraídas. As
+    estatísticas das séries vêm de GET /fatos/resumo na
     página Início.
 
 Cache e estado de sessão:
@@ -196,7 +218,9 @@ Cache e estado de sessão:
 
 Serviço de upload e download de arquivos:
     O componente st.file_uploader, na página Comparação internacional, recebe o
-    CSV do DataBank, que passa a alimentar os filtros, os gráficos e a tabela.
+    CSV do DataBank. Com a API no ar, o arquivo vai para POST /world-bank e
+    os dados voltam de GET /world-bank/{id}; sem ela, o painel lê o CSV
+    direto. Em ambos os casos o envio alimenta filtros, gráficos e tabela.
     Para download, a aplicação disponibiliza o CSV de exemplo, o recorte
     filtrado, as tabelas do SIDRA e do Ipeadata (com fonte, código da série e
     data de extração anexados), o arquivo TXT do texto extraído do Ipea e o
@@ -221,10 +245,10 @@ monitor-desindustrializacao/
         Referencias.md
     Data/
         raw/                   # dados brutos
-        processed/             # POST /documentos
+        processed/             # POST /world-bank (envios do DataBank)
         modeled/               # saídas de modelagem
     Code/
-        api/                   # FastAPI local
+        api/                   # FastAPI local (main, models, routers)
         data_acquisition/      # extração fora do app (scraping do ODS 9)
         data_exploration/      # entendimento e EDA
         modeling/              # modelos
@@ -233,8 +257,9 @@ monitor-desindustrializacao/
         app.py                 # visão geral do dashboard Streamlit
         nucleo.py              # carga e transformação (sem Streamlit)
         dados.py               # cache Streamlit sobre nucleo.py
-        cliente_api.py         # GET na FastAPI com fallback
-        interface.py           # avisos, métrica e download
+        cliente_api.py         # GET/POST na FastAPI com fallback
+        interface.py           # avisos, métrica, gráficos e download
+        assets/                # ícone do ODS 9
         pages/                 # páginas do painel
     requirements.txt
     .gitignore                 # ambiente virtual, cache e segredos
@@ -259,8 +284,8 @@ streamlit run Scripts/app.py
 ```
 
 A API fica em http://127.0.0.1:8000 e a documentação interativa em
-http://127.0.0.1:8000/docs. Com a API no ar, Início, Série histórica e
-Contexto ODS 9 mostram "Origem: API FastAPI". Sem ela, mostram
-"Origem: leitura direta" e continuam funcionando. A página API e dados
-avisa quando o serviço está fora. Exemplos de curl estão em
-Code/api/README.md.
+http://127.0.0.1:8000/docs. Com a API no ar, Início, Série histórica,
+Comparação internacional e Contexto ODS 9 mostram "Origem: API FastAPI".
+Sem ela, mostram "Origem: leitura direta" e continuam funcionando. A
+página Fontes e método indica quando o serviço está fora. Exemplos de
+curl estão em Code/api/README.md.

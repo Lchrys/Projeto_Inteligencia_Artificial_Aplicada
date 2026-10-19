@@ -4,7 +4,6 @@ from wordcloud import WordCloud
 
 from nucleo import (
     ANO_QUEBRA_SCN,
-    ARQ_DOCUMENTOS,
     ARQ_ODS9_CSV,
     ARQ_ODS9_TXT,
     ARQ_WB_CSV,
@@ -40,7 +39,6 @@ from nucleo import (
 
 __all__ = [
     "ANO_QUEBRA_SCN",
-    "ARQ_DOCUMENTOS",
     "ARQ_ODS9_CSV",
     "ARQ_ODS9_TXT",
     "ARQ_WB_CSV",

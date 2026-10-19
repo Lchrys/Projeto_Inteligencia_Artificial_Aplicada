@@ -2,20 +2,28 @@ import pandas as pd
 import streamlit as st
 
 from cliente_api import obter, quadro, legenda_origem
-from dados import ANO_QUEBRA_SCN, CODIGO_IPEA, data_consulta, eixo_ano, serie_transformacao
-from interface import aviso_quebra, botao_download, configurar_pagina, metrica_completude
+from dados import ANO_QUEBRA_SCN, CODIGO_IPEA, data_consulta, serie_transformacao
+from interface import (
+    aviso_quebra,
+    botao_download,
+    configurar_pagina,
+    grafico_linha,
+    metrica_completude,
+    sobre_os_dados,
+)
 
 configurar_pagina("Série histórica")
 
 st.title("Série histórica")
 st.caption(
-    "Ipeadata, extração via ipeadatapy (OData4 ValoresSerie). "
-    f"Série {CODIGO_IPEA}: PIB - indústria - transformação - "
-    "preços correntes (% PIB), IBGE/SCN Anual. É a série principal do "
-    "painel, no maior período disponível: mesmo conceito do indicador "
-    "9.2.1 da ONU. Não é fonte independente do IBGE: o Ipeadata "
-    "compila o próprio SCN, em frequência anual. Esta página consome "
-    "GET /serie/transformacao quando a API está no ar."
+    "Qual foi a trajetória da indústria de transformação no PIB brasileiro "
+    "no maior período disponível."
+)
+sobre_os_dados(
+    f"Ipeadata, série {CODIGO_IPEA} (PIB - indústria - transformação - "
+    "preços correntes, % PIB), compilada do IBGE/SCN Anual via ipeadatapy. "
+    "É o indicador 9.2.1 da ONU, não uma fonte independente do IBGE. "
+    "A página consome GET /serie/transformacao quando a API está no ar."
 )
 
 
@@ -61,8 +69,7 @@ if not serie.empty:
         (serie["ano"] >= intervalo[0]) & (serie["ano"] <= intervalo[1])
     ]
     if "valor" in serie.columns:
-        grafico = serie.set_index("ano")[["valor"]]
-        st.line_chart(eixo_ano(grafico))
+        grafico_linha(serie[["ano", "valor"]])
         metrica_completude(
             serie["valor"],
             anos=anos_com_valor,

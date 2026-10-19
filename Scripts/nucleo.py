@@ -2,6 +2,7 @@
 
 from collections import Counter
 from datetime import date
+from io import BytesIO
 from pathlib import Path
 import re
 import uuid
@@ -26,7 +27,7 @@ HEADERS = {
     "User-Agent": "monitor-desindustrializacao/0.1",
 }
 URL_SIDRA_TRIMESTRAL = (
-    "https://servicodados.ibge.gov.br/api/v3/agregados/1846/periodos/-1/"
+    "https://servicodados.ibge.gov.br/api/v3/agregados/1846/periodos/-4/"
     "variaveis/all?localidades=N1[1]"
     "&classificacao=11255[90707,90705,90706,90687,90691,90696]"
 )
@@ -44,14 +45,14 @@ CODIGOS_SIDRA = {
 }
 TOLERANCIA_SOMA = 0.005
 URL_SIDRA_SUBSETORES = (
-    "https://servicodados.ibge.gov.br/api/v3/agregados/1846/periodos/-1/"
+    "https://servicodados.ibge.gov.br/api/v3/agregados/1846/periodos/-4/"
     "variaveis/all?localidades=N1[1]&classificacao=11255[90693,90692,90694,90695]"
 )
 RAIZ = Path(__file__).resolve().parents[1]
 ARQ_ODS9_CSV = RAIZ / "Data" / "raw" / "ods9_metas.csv"
 ARQ_ODS9_TXT = RAIZ / "Data" / "raw" / "ods9_corpus.txt"
 ARQ_WB_CSV = RAIZ / "Data" / "raw" / "world_bank_setorial.csv"
-ARQ_DOCUMENTOS = RAIZ / "Data" / "processed" / "documentos.csv"
+DIR_ENVIOS_WB = RAIZ / "Data" / "processed" / "world_bank_envios"
 COLUNAS_DATABANK = ("Country Name", "Country Code", "Series Name", "Series Code")
 COLUNAS_DOCUMENTOS = ("id", "fonte", "url", "data", "tipo", "titulo", "texto")
 FONTE_IPEADATA = "Ipeadata, série SCN10_VAITY10 (IBGE/SCN Anual)"
@@ -258,6 +259,41 @@ def descartar_rodape_databank(largo: pd.DataFrame) -> pd.DataFrame:
     ].copy()
 
 
+def ler_databank(conteudo: bytes) -> pd.DataFrame:
+    """Lê um CSV do DataBank em memória, descarta o rodapé e achata."""
+    try:
+        largo = pd.read_csv(BytesIO(conteudo), dtype=str)
+    except Exception as exc:
+        raise ValueError(f"Não foi possível ler o CSV: {exc}") from exc
+    largo = descartar_rodape_databank(largo)
+    if largo.empty:
+        raise ValueError("O arquivo não tem linhas de dados do DataBank.")
+    return achatar_databank(largo)
+
+
+def gravar_envio_wb(quadro: pd.DataFrame) -> str:
+    envio_id = str(uuid.uuid4())
+    DIR_ENVIOS_WB.mkdir(parents=True, exist_ok=True)
+    quadro.to_csv(DIR_ENVIOS_WB / f"{envio_id}.csv", index=False, encoding="utf-8")
+    return envio_id
+
+
+def carregar_envio_wb(envio_id: str) -> pd.DataFrame | None:
+    try:
+        uuid.UUID(str(envio_id))
+    except (ValueError, TypeError):
+        return None
+    arquivo = DIR_ENVIOS_WB / f"{envio_id}.csv"
+    if not arquivo.is_file():
+        return None
+    quadro = pd.read_csv(arquivo)
+    if "date" in quadro.columns:
+        quadro["date"] = pd.to_numeric(quadro["date"], errors="coerce").astype("Int64")
+    if "value" in quadro.columns:
+        quadro["value"] = pd.to_numeric(quadro["value"], errors="coerce")
+    return quadro
+
+
 def carregar_world_bank(caminho: Path | None = None) -> pd.DataFrame:
     arquivo = caminho or ARQ_WB_CSV
     if not arquivo.exists():
@@ -296,6 +332,7 @@ def serie_transformacao() -> pd.DataFrame:
 
 
 def valor_sidra(quadro: pd.DataFrame, codigo: str) -> float | None:
+    """Soma o valor do código em todos os períodos do quadro (em geral, 4 trimestres)."""
     if quadro.empty or "D3C" not in quadro.columns or "V" not in quadro.columns:
         return None
     recorte = quadro[quadro["D3C"].astype(str) == str(codigo)]
@@ -304,7 +341,54 @@ def valor_sidra(quadro: pd.DataFrame, codigo: str) -> float | None:
     valores = pd.to_numeric(recorte["V"], errors="coerce").dropna()
     if valores.empty:
         return None
-    return float(valores.iloc[0])
+    return float(valores.sum())
+
+
+def periodos_sidra(quadro: pd.DataFrame) -> dict:
+    """Primeiro e último trimestre do quadro, para a legenda do acumulado."""
+    vazio = {"inicio": "", "fim": "", "rotulo_inicio": "", "rotulo_fim": ""}
+    if quadro.empty or "D2C" not in quadro.columns:
+        return vazio
+    colunas = ["D2C"]
+    if "D2N" in quadro.columns:
+        colunas.append("D2N")
+    periodos = quadro[colunas].drop_duplicates().sort_values("D2C")
+    if periodos.empty:
+        return vazio
+    inicio = str(periodos["D2C"].iloc[0])
+    fim = str(periodos["D2C"].iloc[-1])
+    rotulo_inicio = (
+        str(periodos["D2N"].iloc[0]) if "D2N" in periodos.columns else inicio
+    )
+    rotulo_fim = (
+        str(periodos["D2N"].iloc[-1]) if "D2N" in periodos.columns else fim
+    )
+    return {
+        "inicio": inicio,
+        "fim": fim,
+        "rotulo_inicio": rotulo_inicio,
+        "rotulo_fim": rotulo_fim,
+    }
+
+
+COLUNAS_SIDRA_LEGIVEL = {
+    "NC": "nivel_id",
+    "NN": "nivel",
+    "MN": "unidade",
+    "D1C": "local_id",
+    "D1N": "local",
+    "D2C": "periodo_id",
+    "D2N": "periodo",
+    "D3C": "setor_id",
+    "D3N": "setor",
+    "V": "valor",
+}
+
+
+def tabela_sidra_legivel(quadro: pd.DataFrame) -> pd.DataFrame:
+    if quadro.empty:
+        return quadro
+    return quadro.rename(columns=COLUNAS_SIDRA_LEGIVEL)
 
 
 def _linha_participacao(
@@ -321,21 +405,38 @@ def _linha_participacao(
 
 
 def participacao_setorial(
-    trimestral: pd.DataFrame, subsetores: pd.DataFrame
+    trimestral: pd.DataFrame, subsetores: pd.DataFrame | None = None
 ) -> pd.DataFrame:
+    """Agropecuária, indústria, serviços e impostos (somam o PIB a preços de mercado)."""
     pib = valor_sidra(trimestral, CODIGOS_SIDRA["pib"])
     va = valor_sidra(trimestral, CODIGOS_SIDRA["va"])
     linhas = [
         ("Agropecuária", CODIGOS_SIDRA["agro"], trimestral),
         ("Indústria", CODIGOS_SIDRA["industria"], trimestral),
         ("Serviços", CODIGOS_SIDRA["servicos"], trimestral),
-        ("Transformação", CODIGOS_SIDRA["transformacao"], subsetores),
+        ("Impostos líquidos", CODIGOS_SIDRA["impostos"], trimestral),
     ]
     saida = [
         _linha_participacao(nome, codigo, valor_sidra(fonte, codigo), pib, va)
         for nome, codigo, fonte in linhas
     ]
     return pd.DataFrame(saida)
+
+
+def participacao_transformacao(
+    trimestral: pd.DataFrame, subsetores: pd.DataFrame
+) -> dict:
+    """Transformação como 'dos quais' da indústria, não como quarto setor."""
+    pib = valor_sidra(trimestral, CODIGOS_SIDRA["pib"])
+    va = valor_sidra(trimestral, CODIGOS_SIDRA["va"])
+    industria = valor_sidra(trimestral, CODIGOS_SIDRA["industria"])
+    valor = valor_sidra(subsetores, CODIGOS_SIDRA["transformacao"])
+    linha = _linha_participacao(
+        "Transformação", CODIGOS_SIDRA["transformacao"], valor, pib, va
+    )
+    if industria not in (None, 0) and valor is not None:
+        linha["pct_industria"] = 100 * valor / industria
+    return linha
 
 
 def participacao_subsetores(
@@ -434,46 +535,6 @@ def quadro_vazio_documentos() -> pd.DataFrame:
     return pd.DataFrame(columns=list(COLUNAS_DOCUMENTOS))
 
 
-def carregar_documentos() -> pd.DataFrame:
-    if not ARQ_DOCUMENTOS.exists():
-        return quadro_vazio_documentos()
-    lido = pd.read_csv(ARQ_DOCUMENTOS, dtype=str).fillna("")
-    for coluna in COLUNAS_DOCUMENTOS:
-        if coluna not in lido.columns:
-            lido[coluna] = ""
-    return lido.loc[:, list(COLUNAS_DOCUMENTOS)]
-
-
-def gravar_documentos(quadro: pd.DataFrame) -> None:
-    ARQ_DOCUMENTOS.parent.mkdir(parents=True, exist_ok=True)
-    quadro.loc[:, list(COLUNAS_DOCUMENTOS)].to_csv(
-        ARQ_DOCUMENTOS, index=False, encoding="utf-8"
-    )
-
-
-def anexar_documento(
-    titulo: str,
-    texto: str,
-    fonte: str,
-    data: str,
-    url: str = "",
-    tipo: str = "usuario",
-) -> dict:
-    linha = {
-        "id": str(uuid.uuid4()),
-        "fonte": fonte.strip(),
-        "url": url.strip(),
-        "data": data.strip(),
-        "tipo": tipo.strip() or "usuario",
-        "titulo": titulo.strip(),
-        "texto": texto.strip(),
-    }
-    atual = carregar_documentos()
-    atual = pd.concat([atual, pd.DataFrame([linha])], ignore_index=True)
-    gravar_documentos(atual)
-    return linha
-
-
 def filtrar_documentos(
     quadro: pd.DataFrame, busca: str | None = None, limite: int | None = None
 ) -> pd.DataFrame:
@@ -513,13 +574,6 @@ def documentos_ods9() -> pd.DataFrame:
             }
         )
     return pd.DataFrame(linhas, columns=list(COLUNAS_DOCUMENTOS))
-
-
-def corpus_textual() -> pd.DataFrame:
-    return pd.concat(
-        [documentos_ods9(), carregar_documentos()],
-        ignore_index=True,
-    )
 
 
 def ranking_transformacao(wb: pd.DataFrame) -> dict:
@@ -585,6 +639,81 @@ def ranking_transformacao(wb: pd.DataFrame) -> dict:
             "com valor do Brasil, não um ranking mundial."
         ),
     }
+
+
+def avaliar_criterios(
+    serie: pd.DataFrame | None,
+    somas: dict | None,
+    api_no_ar: bool,
+) -> list[dict]:
+    """Avalia os critérios de sucesso do charter para exibir no painel."""
+    itens = []
+    if serie is None or serie.empty or "ano" not in serie.columns:
+        itens.append(
+            {
+                "criterio": "Completude da série 9.2.1 desde 1995 acima de 90%",
+                "status": "não verificado",
+                "detalhe": "Série do Ipeadata indisponível nesta consulta.",
+            }
+        )
+    else:
+        anos = pd.to_numeric(serie["ano"], errors="coerce")
+        fim = int(anos.max())
+        inicio = ANO_QUEBRA_SCN
+        taxa = completude_anual(anos, inicio, fim)
+        ok = not pd.isna(taxa) and taxa >= 0.9
+        itens.append(
+            {
+                "criterio": "Completude da série 9.2.1 desde 1995 acima de 90%",
+                "status": "atendido" if ok else "não atendido",
+                "detalhe": (
+                    f"{taxa:.0%} dos anos com valor entre {inicio} e {fim}."
+                    if not pd.isna(taxa)
+                    else "Não foi possível calcular."
+                ),
+            }
+        )
+
+    if not somas:
+        itens.append(
+            {
+                "criterio": "Soma setorial coerente com o VA e o PIB (SIDRA)",
+                "status": "não verificado",
+                "detalhe": "Tabela 1846 indisponível nesta consulta.",
+            }
+        )
+    else:
+        ok = bool(somas.get("ok"))
+        itens.append(
+            {
+                "criterio": "Soma setorial coerente com o VA e o PIB (SIDRA)",
+                "status": "atendido" if ok else "não atendido",
+                "detalhe": (
+                    "Agropecuária + indústria + serviços = VA; "
+                    "VA + impostos = PIB (tolerância de 0,5%)."
+                ),
+            }
+        )
+
+    itens.append(
+        {
+            "criterio": "Tabelas baixadas indicam fonte, código e data de extração",
+            "status": "atendido",
+            "detalhe": "O botão de download anexa fonte, codigo_serie e data_extracao.",
+        }
+    )
+    itens.append(
+        {
+            "criterio": "Rotas da API descritas em /docs",
+            "status": "atendido" if api_no_ar else "não verificado",
+            "detalhe": (
+                "Documentação interativa em /docs e em Code/api/README.md."
+                if api_no_ar
+                else "A API local não está no ar; a descrição está em Code/api/README.md."
+            ),
+        }
+    )
+    return itens
 
 
 def fatos_resumo(serie: pd.DataFrame | None = None) -> dict:

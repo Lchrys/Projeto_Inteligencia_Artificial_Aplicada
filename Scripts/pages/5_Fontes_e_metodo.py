@@ -1,13 +1,32 @@
+import pandas as pd
 import streamlit as st
 
-from interface import configurar_pagina
+from cliente_api import (
+    COMANDO_UVICORN,
+    api_disponivel,
+    obter,
+    quadro,
+    url_api,
+)
+from dados import (
+    URL_SIDRA_TRIMESTRAL,
+    amostra_sidra,
+    serie_transformacao,
+)
+from interface import configurar_pagina, sobre_os_dados
+from nucleo import avaliar_criterios, conferir_somas
 
 configurar_pagina("Fontes e método")
 
 st.title("Fontes e método")
 st.caption(
-    "Fontes oficiais previstas no Data Summary Report e referências "
-    "do ODS 9 usadas no recorte do projeto."
+    "De onde vêm os números deste painel e se os critérios de sucesso "
+    "do projeto estão sendo atendidos."
+)
+sobre_os_dados(
+    "Hierarquia das fontes, ressalvas de método e fichas completas estão "
+    "em Docs/Data_Summary_Report.md. Esta página só resume e verifica os "
+    "critérios de sucesso do Project Charter."
 )
 
 fontes_extracao = [
@@ -41,39 +60,88 @@ for col, (rotulo, url, nota) in zip(st.columns(3), fontes_contexto):
 st.markdown("### Hierarquia das fontes")
 st.markdown(
     """
-- **Fonte principal:** Ipeadata (SCN10_VAITY10) e World Bank
-  (NV.IND.MANF.ZS). São o indicador 9.2.1 da ONU em série anual longa.
-- **Fonte de composição:** IBGE/SIDRA, tabela 1846. Foto do trimestre
-  mais recente, para separar manufatura do agregado indústria.
-- **Fonte de contexto:** página ODS 9 do Ipea. Texto, não série.
+Resumo. Detalhe em Docs/Data_Summary_Report.md:
+
+- **Principal:** Ipeadata (SCN10_VAITY10) e World Bank (NV.IND.MANF.ZS) —
+  indicador 9.2.1 em série anual.
+- **Composição:** IBGE/SIDRA, tabela 1846 — foto dos últimos quatro
+  trimestres, para separar manufatura do agregado indústria.
+- **Contexto:** página ODS 9 do Ipea — texto, não série.
     """
 )
 
 st.markdown("### Ressalvas de método")
 st.markdown(
     """
-1. Ipeadata e World Bank não são evidência independente do IBGE: ambos
-   compilam contas nacionais.
-2. No SIDRA, indústria (90691) é o agregado; transformação (90693) é a
-   manufatura.
-3. As séries do SIDRA e do Ipeadata estão a preços correntes.
-4. As séries medem o indicador da ONU; o texto do Ipea entra como
-   ressalva oficial brasileira.
-5. Só de 1995 em diante os níveis das Contas Nacionais brasileiras são
-   comparáveis (Morceiro, 2021).
+As cinco ressalvas (Ipeadata e World Bank compilam o IBGE; indústria ≠
+transformação; preços correntes; redação ONU vs. Brasil; comparabilidade
+só a partir de 1995) estão no Data Summary Report. O painel sinaliza a
+quebra de 1995 nos gráficos.
     """
+)
+
+st.markdown("### Critérios de sucesso")
+st.caption(
+    "Verificação automática dos critérios do Project Charter. "
+    "Itens que dependem de SIDRA, Ipeadata ou da API local podem ficar "
+    "como 'não verificado' se a fonte não responder agora."
+)
+
+
+def _fallback_serie() -> dict:
+    return {"dados": serie_transformacao().to_dict(orient="records")}
+
+
+serie = pd.DataFrame()
+try:
+    payload, _origem = obter("/serie/transformacao", fallback=_fallback_serie)
+    serie = quadro(payload)
+except Exception:
+    serie = pd.DataFrame()
+
+somas = None
+try:
+    somas = conferir_somas(amostra_sidra(URL_SIDRA_TRIMESTRAL))
+except Exception:
+    somas = None
+
+itens = avaliar_criterios(serie, somas, api_disponivel())
+for item in itens:
+    status = item["status"]
+    if status == "atendido":
+        st.success(f"{item['criterio']} — {status}. {item['detalhe']}")
+    elif status == "não atendido":
+        st.error(f"{item['criterio']} — {status}. {item['detalhe']}")
+    else:
+        st.info(f"{item['criterio']} — {status}. {item['detalhe']}")
+
+st.markdown("### API local")
+base = url_api()
+st.caption(f"URL da API: `{base}` (padrão local; sobrescreva com API_URL em secrets).")
+if api_disponivel():
+    st.success("API no ar.")
+    st.link_button("Abrir /docs (Swagger)", f"{base}/docs")
+else:
+    st.warning(
+        "A API não está no ar. Na raiz do repositório, em outro terminal, rode:\n\n"
+        f"`{COMANDO_UVICORN}`\n\n"
+        "Início, Série histórica, Comparação internacional e Contexto ODS 9 "
+        "passam a ler os dados direto (SIDRA, Ipeadata, CSV enviado e Data/raw/)."
+    )
+st.markdown(
+    """
+O que cada página consome quando a API está no ar:
+
+- **Início:** GET /fatos/resumo (números) e GET /serie/transformacao (gráfico).
+- **Série histórica:** GET /serie/transformacao.
+- **Comparação internacional:** POST /world-bank (CSV do DataBank) e GET /world-bank/{id}.
+- **Contexto ODS 9:** GET /ods9/metas.
+- **Panorama setorial:** SIDRA direto (não passa pela API).
+"""
 )
 
 st.markdown("### Referências")
 st.markdown(
     "Citações completas em Docs/Referencias.md. A literatura entra na "
     "validação cruzada do Data Summary Report, fora dos gráficos."
-)
-
-st.caption(
-    "O serviço de upload e download fica na página Comparação internacional: "
-    "baixe o CSV de exemplo e envie-o no painel para filtrar, ver gráficos e "
-    "baixar o recorte. Início, Série histórica e Contexto ODS 9 consomem a "
-    "API FastAPI quando ela está no ar e leem Data/raw/ ou as APIs oficiais "
-    "quando não está."
 )
