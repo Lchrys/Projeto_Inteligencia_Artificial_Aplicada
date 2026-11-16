@@ -1,5 +1,7 @@
 # Data / processed
 
+Este README foi redigido com apoio de IA (Claude Opus 5.5 e Claude Haiku 5.5) e revisado pelo autor.
+
 Arquivos recebidos pela API FastAPI depois da validação, não séries oficiais
 novas.
 

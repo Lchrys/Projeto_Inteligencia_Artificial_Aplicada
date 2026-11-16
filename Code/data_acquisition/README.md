@@ -1,5 +1,7 @@
 # Data Acquisition (TDSP)
 
+Este README foi redigido com apoio de IA (Claude Opus 5.5 e Claude Haiku 5.5) e revisado pelo autor.
+
 A aquisição de dados do projeto tem quatro formas (seções 1 a 4). O Selenium não entra nesta
 etapa; a decisão está em Docs/Data_Summary_Report.md.
 

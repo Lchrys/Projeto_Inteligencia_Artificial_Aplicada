@@ -1,5 +1,7 @@
 # Routers da API
 
+Este README foi redigido com apoio de IA (Claude Opus 5.5 e Claude Haiku 5.5) e revisado pelo autor.
+
 Objetivo: separar as rotas por assunto, para cada arquivo cuidar de um conjunto de endpoints.
 
 - `series.py`: séries oficiais (Ipeadata) e envio do CSV do DataBank (`/serie/transformacao`, `/world-bank`).

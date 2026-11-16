@@ -1,5 +1,7 @@
 # Scripts (painel Streamlit)
 
+Este README foi redigido com apoio de IA (Claude Opus 5.5 e Claude Haiku 5.5) e revisado pelo autor.
+
 Objetivo: o painel que o usuário vê. Cada arquivo tem um papel:
 
 - `app.py`: ponto de entrada do painel e página Início.

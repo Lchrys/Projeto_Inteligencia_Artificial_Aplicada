@@ -1,5 +1,7 @@
 # Páginas do painel
 
+Este README foi redigido com apoio de IA (Claude Opus 5.5 e Claude Haiku 5.5) e revisado pelo autor.
+
 Objetivo: uma página por tema. O menu lista as páginas na ordem do nome do arquivo.
 
 - `1_Panorama_setorial.py`: participação de agropecuária, indústria, serviços e impostos no PIB, nos últimos quatro trimestres (SIDRA).

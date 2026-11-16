@@ -1,5 +1,7 @@
 # Data / raw
 
+Este README foi redigido com apoio de IA (Claude Opus 5.5 e Claude Haiku 5.5) e revisado pelo autor.
+
 Arquivos brutos, sem transformação. Toda extração externa é feita fora do
 dashboard. Fichas e ressalvas: Docs/Data_Summary_Report.md.
 

@@ -1,5 +1,7 @@
 # Data / modeled
 
+Este README foi redigido com apoio de IA (Claude Opus 5.5 e Claude Haiku 5.5) e revisado pelo autor.
+
 Saídas de modelagem e indicadores calculados.
 
 ## Medições de modelos de linguagem (TP4)

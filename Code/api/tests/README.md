@@ -1,5 +1,7 @@
 # Testes da API
 
+Este README foi redigido com apoio de IA (Claude Opus 5.5 e Claude Haiku 5.5) e revisado pelo autor.
+
 Objetivo: verificar as regras da API sem depender de rede nem de um modelo pesado,
 e, quando pedido, confirmar a integração com o modelo real.
 

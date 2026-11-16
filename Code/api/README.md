@@ -1,5 +1,7 @@
 # API do monitor (FastAPI)
 
+Este README foi redigido com apoio de IA (Claude Opus 5.5 e Claude Haiku 5.5) e revisado pelo autor.
+
 API local para consultar as séries oficiais e os textos do ODS 9, e para
 receber o CSV do DataBank. O painel consome estas rotas em Início, Série
 histórica, Comparação internacional e Contexto ODS 9
