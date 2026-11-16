@@ -67,6 +67,34 @@ def enviar_arquivo(
     return resposta.json()
 
 
+def analisar_texto(texto: str) -> dict | None:
+    """POST /processar_texto (resumo com o modelo local). Devolve None se a API não responder.
+
+    Em 4xx e 5xx levanta ValueError com a mensagem do `detail`. O 422 do FastAPI
+    traz uma lista de problemas; ela vira uma frase.
+    """
+    try:
+        resposta = requests.post(
+            f"{url_api()}/processar_texto",
+            json={"texto": texto},
+            timeout=180,
+        )
+    except requests.RequestException:
+        return None
+    if resposta.status_code >= 400:
+        try:
+            detalhe = resposta.json().get("detail", resposta.text)
+        except ValueError:
+            detalhe = resposta.text
+        if isinstance(detalhe, list):
+            detalhe = " ".join(
+                str(item.get("msg", item)) if isinstance(item, dict) else str(item)
+                for item in detalhe
+            )
+        raise ValueError(str(detalhe))
+    return resposta.json()
+
+
 def _params_chave(params: dict | None) -> tuple:
     if not params:
         return ()

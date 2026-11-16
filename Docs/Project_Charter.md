@@ -8,9 +8,9 @@ redações da ONU e do Brasil para a meta 9.2 estão na seção 1 de
 [Referencias.md](Referencias.md).
 
 O painel mede o componente "em proporção do PIB" do indicador 9.2.1 da
-ONU. O componente per capita não entra nesta etapa.
+ONU. O componente per capita não entra no TP3.
 
-O problema de negócio permanece a evidência oficial dispersa. Nesta etapa o
+O problema de negócio permanece a evidência oficial dispersa. No TP3 o
 painel também oferece acesso programático às mesmas séries e textos, pela
 API FastAPI local, e deixa o corpus e os indicadores calculados prontos para
 consulta em linguagem natural na etapa de LLM.
@@ -39,7 +39,7 @@ Não entra neste projeto (fora do escopo):
 - Coleta por Selenium: ver a decisão em
   [Data_Summary_Report.md](Data_Summary_Report.md).
 
-Não entra nesta etapa (adiado, não descartado):
+Não entra no TP3 (adiado, não descartado):
 
 - Emprego, salário, informalidade ou CAGED/RAIS: o painel não exibe
   essas séries (o emprego justifica o pilar Social, mas ainda não é
@@ -66,7 +66,7 @@ Não entra nesta etapa (adiado, não descartado):
 
 ## Revisão no TP3
 
-O problema de negócio continua a evidência oficial dispersa. Nesta etapa
+O problema de negócio continua a evidência oficial dispersa. No TP3
 o painel também oferece acesso programático às séries e aos textos, pela
 API FastAPI local (`Code/api/`, com modelos Pydantic e routers). Início,
 Série histórica, Comparação internacional e Contexto ODS 9 consomem
@@ -88,13 +88,15 @@ Entregue no TP2: ambiente e estrutura TDSP; controle de versão em Git, com repo
 
 Entregue no TP3: API FastAPI local com modelos de resposta e routers; Início, Série histórica, Comparação internacional e Contexto ODS 9 consomem a API, com fallback para leitura direta; menu em seções; POST /world-bank recebe o CSV do DataBank e GET /world-bank/{id} o consulta; aba Corpus na Contexto ODS 9 (metas extraídas); Panorama em quatro trimestres, com a transformação isolada da indústria; Comparação internacional alimentada pelo CSV enviado pelo usuário; lógica compartilhada em `Scripts/nucleo.py`; envios do DataBank em `Data/processed/world_bank_envios/`; decisão documentada de não usar Selenium; preparação concreta para LLM; critérios de sucesso verificados na página Fontes e método.
 
-Previsto para etapas posteriores: uso de LLM (Q&A, resumo das justificativas e relatório a partir de `/fatos/resumo`); indicador 9.2.2 (emprego na indústria sobre o emprego total, PNAD Contínua no SIDRA) para dar evidência ao pilar Social da meta 9.2; ampliação do corpus textual em `Data/raw/` (Carta de Conjuntura do Ipea, releases do PIB do IBGE e resumos das referências); participação em volume, além da participação a preços correntes; Banco Central/SGS como leitura de curto prazo; indicadores de complexidade (alta e média-alta intensidade tecnológica, 9.b.1).
+Entregue no TP4: `POST /processar_texto` na API FastAPI local, com um modelo de linguagem local (`Qwen/Qwen3-0.6B`, na CPU) que gera resumos em português; modelos de entrada e saída em `Code/api/models.py`; códigos 422, 502, 503, 504 e 500 documentados e testados; corpus textual ampliado com os resumos das referências (`Code/data_acquisition/scrape_referencias.py`, em `Data/raw/referencias_resumos.csv`). A escolha do modelo está em `Docs/Escolha_do_modelo.md`.
+
+Previsto para etapas posteriores: Q&A e relatório narrativo a partir de `/fatos/resumo`; indicador 9.2.2 (emprego na indústria sobre o emprego total, PNAD Contínua no SIDRA) para dar evidência ao pilar Social da meta 9.2; ampliação do corpus textual em `Data/raw/`: resumos das referências já coletados por `Code/data_acquisition/scrape_referencias.py` (SciELO, Springer e FGV; Tregenna e Palma bloqueados, Rowthorn excluído por decisão); Carta de Conjuntura do Ipea e releases do PIB do IBGE ainda pendentes (releases bloqueadas para coleta automatizada); participação em volume, além da participação a preços correntes; Banco Central/SGS como leitura de curto prazo; indicadores de complexidade (alta e média-alta intensidade tecnológica, 9.b.1).
 
 Indicadores de sucesso: maior intervalo histórico possível nas APIs; comparação de agropecuária, indústria e serviços (e subsetores, quando possível); completude acima de 90% dos anos com valor na série do indicador 9.2.1 a partir de 1995, verificada na Série histórica (anos com valor sobre anos do intervalo); cada tabela baixada indica fonte, código da série e data de extração; soma setorial coerente com o valor adicionado a preços básicos, verificada no Panorama (agropecuária + indústria + serviços = VA; VA + impostos = PIB), sem exigir 100% do PIB a preços de mercado; consistência com a literatura econômica no tema, verificada no Data Summary Report; rotas da API descritas em `/docs` e em `Code/api/README.md`.
 
 ## Preparação para IA
 
-Não há modelo de linguagem nesta etapa. Cada caso de uso da etapa
+Não há modelo de linguagem no TP3. Cada caso de uso da etapa
 seguinte tem dado de entrada, rota, página de destino e critério de
 avaliação:
 
@@ -113,8 +115,8 @@ O corpus atual (oito metas do ODS 9) é o mínimo para ensaiar Q&A. Na
 etapa de LLM ele deve ser ampliado com notas de conjuntura, releases do
 PIB e resumos da literatura, em arquivos em `Data/raw/`.
 
-A chave do provedor de LLM fica em `.streamlit/secrets.toml` ou `.env`,
-ambos ignorados pelo Git. Não há chave neste repositório.
+O modelo de linguagem roda na máquina local e não usa chave de provedor.
+Não há chave neste repositório.
 
 ## Stakeholders
 

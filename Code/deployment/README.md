@@ -8,9 +8,14 @@ Scripts/cliente_api.py).
 
 ## Ambiente
 
-Python 3.14 no desenvolvimento local e Python 3.12 no Streamlit Community
-Cloud. Dependências em requirements.txt. No Cloud, fastapi e uvicorn são
-instalados, mas não executados.
+Python 3.13 no desenvolvimento local (`.venv`) e Python 3.12 no Streamlit
+Community Cloud. Dependências em requirements.txt.
+
+No Cloud, fastapi, uvicorn, torch, transformers e httpx são instalados, mas
+não executados: a API só roda na máquina de quem a usa. O torch vem da versão só
+de CPU do PyTorch (`--extra-index-url` no requirements.txt), para o build não
+baixar CUDA. A versão fixada, 2.15.0, tem build de CPU para Python 3.12 e 3.13,
+em Windows e Linux (verificado no índice do PyTorch).
 
 ## Execução local (Windows)
 
@@ -39,5 +44,5 @@ Branch main, arquivo principal Scripts/app.py, dependências em
 requirements.txt. SIDRA e Ipeadata são APIs públicas; o World Bank entra
 pelo upload do usuário (CSV de exemplo em Data/raw/). A FastAPI local não
 sobe no Cloud.
-`.streamlit/secrets.toml` e `.env` ficam de fora do Git, para a chave do
-LLM na etapa seguinte.
+`.streamlit/secrets.toml` e `.env` ficam de fora do Git. O modelo de linguagem
+roda na máquina local e não usa chave de provedor.

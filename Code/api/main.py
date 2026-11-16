@@ -1,10 +1,22 @@
 """API local do monitor: consulta e envio de dados oficiais e textuais."""
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from Code.api import _paths  # noqa: F401
+from Code.api.erros import erro, erro_inesperado
 from Code.api.models import SaudeOut
-from Code.api.routers import ods9, series
+from Code.api.routers import ods9, series, texto
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Carrega o modelo de linguagem ao subir a API e o libera ao descer."""
+    texto.carregar_na_subida()
+    yield
+    texto.liberar_na_descida()
+
 
 app = FastAPI(
     title="Monitor Brasileiro de Desindustrialização",
@@ -17,10 +29,17 @@ app = FastAPI(
         "Code/api/models.py."
     ),
     version="0.4.0",
+    lifespan=lifespan,
+    # Documenta o 500 em todas as rotas: qualquer uma pode falhar por um motivo imprevisto.
+    responses={500: erro("Erro interno, com um código para informar a quem mantém a API.")},
 )
+
+# A rede de segurança: o que nenhuma rota tratou vira 500 em JSON, com código (erros.py).
+app.add_exception_handler(Exception, erro_inesperado)
 
 app.include_router(series.router)
 app.include_router(ods9.router)
+app.include_router(texto.router)
 
 
 @app.get(

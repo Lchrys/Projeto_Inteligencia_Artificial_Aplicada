@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 
-from cliente_api import obter, quadro, legenda_origem
+from cliente_api import ORIGEM_API, analisar_texto, obter, quadro, legenda_origem
 from dados import (
     COLUNAS_DOCUMENTOS,
     data_consulta,
@@ -28,7 +28,7 @@ sobre_os_dados(
     "dessas metas para busca e frequência de palavras."
 )
 
-aba_meta, aba_corpus = st.tabs(["Meta", "Corpus"])
+aba_meta, aba_corpus, aba_resumo = st.tabs(["Meta", "Corpus", "Resumo"])
 
 
 def _fallback_metas() -> dict:
@@ -168,3 +168,53 @@ with aba_corpus:
         st.caption(
             "Metas do ODS 9 vêm do arquivo extraído em Data/raw/ods9_metas.csv."
         )
+
+with aba_resumo:
+    st.markdown("#### Resumo com modelo de linguagem local")
+    st.caption(
+        "O resumo é gerado pelo modelo Qwen3-0.6B, rodando na API local, a partir "
+        "da justificativa de uma meta. Ele pode errar: confira com o texto de "
+        "origem antes de usar como fato."
+    )
+    payload_resumo, _origem_resumo = obter("/ods9/metas", fallback=_fallback_metas)
+    metas_resumo = quadro(payload_resumo)
+    if metas_resumo.empty or "justificativa" not in metas_resumo.columns:
+        st.warning("Não há justificativas de metas para resumir.")
+    else:
+        com_texto = metas_resumo[
+            metas_resumo["justificativa"].fillna("").astype(str).str.len() >= 50
+        ]
+        opcoes_resumo = com_texto["meta"].astype(str).tolist()
+        if not opcoes_resumo:
+            st.warning("Nenhuma justificativa tem texto suficiente para resumir.")
+        else:
+            meta_resumo = st.selectbox(
+                "Meta a resumir", opcoes_resumo, key="meta_resumo"
+            )
+            texto_meta = str(
+                com_texto[com_texto["meta"].astype(str) == meta_resumo][
+                    "justificativa"
+                ].iloc[0]
+            )
+            with st.expander("Texto de origem (justificativa da meta)"):
+                st.write(texto_meta)
+            if st.button("Gerar resumo", key="btn_resumo"):
+                with st.spinner(
+                    "Gerando o resumo. Na máquina de referência, leva de 12 a 40 segundos."
+                ):
+                    try:
+                        resultado = analisar_texto(texto_meta)
+                    except ValueError as exc:
+                        st.error(f"Não foi possível gerar o resumo: {exc}")
+                    else:
+                        if resultado is None:
+                            st.warning(
+                                "Resumo indisponível: a API local não respondeu. "
+                                "Para usar esta aba, suba a API na sua máquina: "
+                                "uvicorn Code.api.main:app"
+                            )
+                        else:
+                            st.write(resultado["resumo"])
+                            st.warning(resultado["aviso"])
+                            st.caption(f"Modelo: {resultado['motor']}")
+                            legenda_origem(ORIGEM_API)

@@ -1,291 +1,202 @@
 # Monitor Brasileiro de Desindustrialização
 
-Painel para acompanhar a participação da indústria no PIB brasileiro,
-alinhado ao ODS 9.2 e ao pilar Social do ESG.
+Painel para acompanhar a participação da indústria no PIB brasileiro, alinhado ao
+ODS 9.2 e ao pilar Social do ESG. Aplicação publicada:
+[Streamlit](https://projetointeligenciaartificialaplicada-bahhxlugo9rejaxkrd3njj.streamlit.app/)
 
-Aplicação publicada: [(Streamlit)](https://projetointeligenciaartificialaplicada-bahhxlugo9rejaxkrd3njj.streamlit.app/)
+Este README foi redigido com apoio de IA (Claude Opus 5.5 e Claude Haiku 5.5) e revisado pelo autor.
 
-Este README foi redigido com apoio de inteligência artificial (Claude Opus 5.5) e revisado pelo autor do projeto.
+**Etapas:** TP2 (painel Streamlit) → TP3 (API FastAPI, scraping, upload) → **TP4 (API integrada a um LLM local)**.
 
-# 1. Identificação do problema de negócio
+## Sumário
 
-Problema de negócio: o Brasil perde participação da indústria de
-transformação no produto interno há décadas, movimento registrado nas Contas
-Nacionais do IBGE e tratado na literatura como desindustrialização (Tregenna,
-2009; Oreiro e Feijó, 2010; Morceiro, 2021; citações em Docs/Referencias.md).
-O efeito é o avanço de ocupações em serviços de baixa produtividade, com menos
-empregos formais, e a perda de capacidade de inovar e de exportar bens mais
-sofisticados. A evidência oficial existe, porém permanece dispersa entre bases
-estatísticas e relatórios especializados. O problema que a aplicação resolve é
-a falta de um painel acessível que reúna essa trajetória setorial a partir de
-fontes oficiais. Nesta etapa o painel também expõe as mesmas séries e textos
-por uma API FastAPI local, preparando a consulta em linguagem natural na
-etapa de LLM.
+1. [Problema de negócio](#1-problema-de-negócio)
+2. [Organização (CRISP-DM e TDSP)](#2-organização-crisp-dm-e-tdsp)
+3. [Entregas do TP2 e TP3](#3-entregas-do-tp2-e-tp3)
+4. [TP4: API com modelo de linguagem local](#4-tp4-api-com-modelo-de-linguagem-local)
+5. [Como rodar (Windows)](#5-como-rodar-windows)
+6. [Estrutura de diretórios](#6-estrutura-de-diretórios)
 
-Metas e indicadores de sucesso: comparar a participação de agropecuária,
-indústria e serviços no PIB, com a indústria aberta em subsetores quando a
-fonte permitir, e montar a série histórica da indústria de transformação no
-maior período disponível. O projeto é
-bem-sucedido se a série do indicador 9.2.1 tiver valor em mais de 90% dos anos
-a partir de 1995 (percentual exibido no painel); se cada tabela baixada
-indicar fonte, código da série e data de extração; se a soma setorial for
-coerente com o valor adicionado a preços básicos, e não com 100% do PIB a
-preços de mercado; se os dados do IBGE forem compatíveis com o Ipeadata e com
-a literatura; se as quebras metodológicas estiverem sinalizadas no painel;
-se as séries consultadas por API exibirem sempre a divulgação oficial mais
-recente, sem valores inseridos manualmente; e se as rotas da API FastAPI
-estiverem descritas em /docs.
+---
 
-Pilar ESG: o projeto se insere no pilar Social (S), porque a retração da
-indústria de transformação reduz a oferta relativa de empregos formais e de
-maior produtividade. Complementarmente, dialoga com o pilar Ambiental (E),
-pela industrialização inclusiva e sustentável da meta 9.2, e com o pilar
-Governança (G), pelo uso de dados públicos no debate de política industrial.
+## 1. Problema de negócio
 
-ODS atendida e justificativa: o projeto atende ao ODS 9 (Indústria, Inovação e
-Infraestrutura), na meta 9.2. O indicador oficial 9.2.1 é o valor adicionado
-da indústria de transformação como proporção do PIB e per capita; este projeto
-cobre o componente em proporção do PIB. O ODS 8 (Trabalho Decente e
-Crescimento Econômico) entra apenas como contexto.
+O Brasil perde participação da indústria de transformação no PIB há décadas
+(desindustrialização; Tregenna, 2009; Oreiro e Feijó, 2010; Morceiro, 2021 — ver
+`Docs/Referencias.md`). Isso desloca ocupações para serviços de baixa produtividade e
+reduz a capacidade de inovar e exportar. A evidência oficial existe, mas está dispersa. O
+projeto entrega um painel acessível, e uma API, que reúnem essa trajetória a partir de
+fontes oficiais (IBGE/SIDRA, Ipeadata, World Bank, Ipea).
 
-Precisão do recorte: o indicador medido é a indústria de transformação (código
-90693 no SIDRA), e não o agregado "indústria" (90691), que inclui extrativa,
-construção e utilities. As séries estão a preços correntes, de modo que a
-participação também se move por preço relativo. As ressalvas de método estão
-detalhadas em Docs/Data_Summary_Report.md.
+**Metas de sucesso:** série do indicador 9.2.1 com valor em mais de 90% dos anos desde 1995;
+cada tabela com fonte, código da série e data de extração; soma setorial coerente com o valor
+adicionado a preços básicos; dados do IBGE compatíveis com Ipeadata e literatura; quebras
+metodológicas sinalizadas; séries da API sempre com a divulgação oficial mais recente; rotas
+descritas em `/docs`.
 
-Divergência entre ONU e Brasil: a redação da ONU para a meta 9.2 pede aumentar
-a participação da indústria no PIB e no emprego, enquanto a redação adaptada
-pelo Ipea desloca o foco para produtividade e complexidade tecnológica. O
-painel assume essa divergência: as séries medem o indicador da ONU e o texto
-extraído da página do Ipea entra como ressalva oficial brasileira.
+**ESG e ODS:** pilar Social (menos empregos formais e de maior produtividade), com
+diálogo com o Ambiental (industrialização sustentável) e a Governança (dados públicos). Atende
+ao **ODS 9, meta 9.2** (indicador 9.2.1, em proporção do PIB); o ODS 8 entra só como contexto.
 
-Público-alvo: formuladores de políticas públicas de desenvolvimento econômico
-e industrial, entidades de classe e federações industriais, pesquisadores e
-estudantes de economia, áreas de ESG e relações institucionais, além de
-demais interessados no tema.
+**Recorte:** indicador = indústria de transformação (SIDRA 90693), não a indústria total
+(90691). Séries a preços correntes. A ONU pede aumentar a participação da indústria; o Ipea
+desloca o foco para produtividade e complexidade — o painel mede o indicador da ONU e exibe o
+texto do Ipea como ressalva. Detalhes em `Docs/Data_Summary_Report.md`.
 
-# 2. Organização do projeto (CRISP-DM e TDSP)
+**Público:** formuladores de política industrial, federações e entidades de classe,
+pesquisadores, estudantes de economia, áreas de ESG e demais interessados.
 
-O projeto é estruturado pelos métodos CRISP-DM e TDSP, usados em conjunto. O
-CRISP-DM organiza o trabalho em seis fases; o TDSP acrescenta
-papéis de equipe e a estrutura de pastas adotada em Docs/, Data/, Code/ e
-Scripts/. As listas a seguir indicam o artefato correspondente a cada fase.
+## 2. Organização (CRISP-DM e TDSP)
 
-- CRISP-DM:
+CRISP-DM e TDSP são usados em conjunto; a estrutura de pastas segue o TDSP.
 
-Entendimento do negócio:
-    Seção 1 deste README e Docs/Project_Charter.md, que delimita o que entra e
-    o que não entra no escopo.
+| Fase (CRISP-DM / TDSP) | Artefato |
+|---|---|
+| Entendimento do negócio / Business Understanding | Seção 1 e `Docs/Project_Charter.md` (escopo, critérios, interessados) |
+| Entendimento dos dados / Data Acquisition | `Docs/Data_Summary_Report.md`, `Code/data_exploration/`; aquisição por API (`Scripts/nucleo.py`), scraping (`Code/data_acquisition/`) e upload do DataBank |
+| Preparação dos dados | `Scripts/nucleo.py` (cacheado em `Scripts/dados.py`); brutos em `Data/raw/`, recebidos por POST em `Data/processed/` |
+| Modelagem / Modeling | Sem modelo preditivo (o charter exclui previsão). Cálculo das participações e comparações; no TP4, o LLM de resumo em `Code/modeling/` |
+| Avaliação / Customer Acceptance | Página *Fontes e método* confere os critérios de sucesso; o avaliador acadêmico exerce o papel do cliente |
+| Implantação / Deployment | Painel (`Scripts/app.py`), API (`Code/api/main.py`), notas em `Code/deployment/` |
 
-Entendimento dos dados:
-    Docs/Data_Summary_Report.md e Code/data_exploration/. As fontes desta
-    etapa são IBGE/SIDRA (tabela 1846), Ipeadata, World Bank (NV.IND.MANF.ZS)
-    e a página ODS 9 do Ipea.
+Papéis: líder (escopo, charter); Data Scientist/Engineer (fontes, indicadores); Solution
+Architect (estrutura TDSP, ambiente, arquitetura).
 
-Preparação dos dados:
-    Padronização das séries e cálculo das participações em Scripts/nucleo.py
-    (o painel envolve essas funções com cache em Scripts/dados.py), com os
-    dados brutos em Data/raw/ e os recebidos por POST em Data/processed/.
-    Cada ponto conserva fonte, código da série e data de extração.
+## 3. Entregas do TP2 e TP3
 
-Modelagem:
-    Não há modelo preditivo, porque o charter exclui previsão. A fase
-    corresponde ao cálculo dos indicadores de participação e às comparações
-    setorial e internacional, com destino em Code/modeling/ e Data/modeled/.
+Painel Streamlit multipágina: `Scripts/app.py` (Início) e `Scripts/pages/`. Com a API no ar,
+as páginas a consomem e indicam a origem do dado ("API FastAPI" ou "leitura direta"); sem
+ela, o painel lê as fontes diretamente.
 
-Avaliação:
-    Verificação da cobertura da série, da procedência de cada valor, da
-    coerência da soma setorial e da compatibilidade entre IBGE, Ipeadata e
-    literatura, conforme as metas da seção 1. A página Fontes e método
-    calcula esses critérios e os exibe como atendidos ou não.
+| Item | Onde / como |
+|---|---|
+| Ambiente e deploy | `requirements.txt` com versões fixas; `.gitignore` (`.venv/`, `.env`, segredos); Git na `main`; deploy no Streamlit Community Cloud (entrada `Scripts/app.py`; ver `Code/deployment/README.md`) |
+| Interface | 6 páginas em 3 seções: Panorama setorial, Série histórica (seletor de anos), Comparação internacional (upload CSV), Contexto ODS 9 (meta, nuvem de palavras, aba Corpus e aba Resumo com o modelo local), Fontes e método |
+| API FastAPI | `Code/api/main.py`, routers e modelos Pydantic; GET de saúde, série, World Bank, metas ODS 9 e fatos/resumo; `POST /world-bank` (201). Cliente em `Scripts/cliente_api.py` |
+| Web scraping | `Code/data_acquisition/scrape_ods9.py` (Beautiful Soup, sem Selenium: nenhuma fonte é dinâmica) grava `Data/raw/ods9_metas.csv` e `ods9_corpus.txt` |
+| Cache e sessão | `st.cache_data` (1 h nas consultas SIDRA/Ipeadata e nas respostas da API); CSV enviado em `st.session_state` |
+| Upload e download | `st.file_uploader` (CSV do DataBank → `POST /world-bank`); downloads de exemplo, recorte filtrado, tabelas SIDRA/Ipeadata (com fonte, código e data), TXT do Ipea e corpus |
+| Documentação | `Docs/Project_Charter.md`, `Docs/Data_Summary_Report.md`, READMEs por pasta |
 
-Implantação:
-    Painel Streamlit em Scripts/app.py e API FastAPI em Code/api/main.py,
-    com notas em Code/deployment/. A fase de Avaliação aparece na página
-    Fontes e método, que verifica os critérios de sucesso do charter.
+## 4. TP4: API com modelo de linguagem local
 
-- TDSP:
+A rota **`POST /processar_texto`** resume um texto (50 a 2.000 caracteres) com o
+**`Qwen/Qwen3-0.6B`** (Apache 2.0, sem conta), executado na máquina do usuário, em float32 na
+CPU, sem internet após o download. Na página *Contexto ODS 9*, a aba **Resumo** usa essa rota
+para resumir a justificativa de uma meta.
 
-Business Understanding:
-    Docs/Project_Charter.md define problema, escopo, objetivos, critérios de
-    sucesso e interessados.
+**Rubrica 1: integração com o LLM.** `Code/modeling/resumidor.py` carrega o modelo uma vez,
+na subida da API, e gera o resumo; `Code/api/routers/texto.py` expõe a rota. O painel a
+consome pelo `Scripts/cliente_api.py`. Medição (`Code/modeling/medir_modelo.py`), no banco
+de 10 textos: 12–38 s por resumo (mediana 26 s), ~2,4 GB de RAM.
 
-Data Acquisition and Understanding:
-    Três formas de aquisição das fontes oficiais: API (SIDRA e Ipeadata, em
-    Scripts/nucleo.py), scraping em script separado
-    (Code/data_acquisition/scrape_ods9.py) e arquivo do DataBank enviado pelo
-    usuário na página Comparação internacional. A API FastAPI do projeto
-    consulta as mesmas fontes; Início, Série histórica, Comparação
-    internacional e Contexto ODS 9 consomem essas rotas, com leitura
-    direta se o serviço não responder. O POST /world-bank grava o CSV
-    enviado pelo usuário em Data/processed/world_bank_envios/.
+**Rubrica 2: integração local (passos, bibliotecas, hardware).**
+- Bibliotecas: `transformers` (tokenizador e geração), `torch` (só CPU, via `--extra-index-url`
+  no `requirements.txt`), `huggingface_hub` (download único), `fastapi` e `uvicorn`; `psutil` e
+  `httpx` só em medição e testes.
+- Passos: seção 5 (instalar → baixar o modelo → subir a API). Com o modelo em disco, funciona
+  offline (`HF_HUB_OFFLINE=1`).
+- Ajustes ao hardware (Intel Core i5-1035G1, 8 GB de RAM, sem GPU): float32 na CPU (~2,4 GB de
+  RAM); modo de raciocínio do Qwen3 desligado (`enable_thinking=False`), pois o resumo só
+  precisa da resposta; aviso de links simbólicos do cache Hugging Face no Windows é inofensivo
+  (só ocupa mais disco). O Qwen2.5-1.5B-Instruct (~6,2 GB só de pesos) travou a máquina e foi
+  descartado.
+- Detalhes: `Code/api/README.md` e `Docs/Escolha_do_modelo.md` (seção 4).
 
-Modeling:
-    Produção dos indicadores de participação no PIB e das comparações, em
-    ciclo com a aquisição quando a qualidade dos dados não for suficiente.
+**Rubrica 3: Response Models.** Todas as rotas declaram `response_model` com modelos
+Pydantic em `Code/api/models.py`; os pedidos rejeitam campos extras. A rota de texto devolve o
+resumo em formato estruturado e documentado em `/docs`.
 
-Deployment:
-    Painel Streamlit, API FastAPI local, ambiente Python em requirements.txt
-    e organização das pastas, documentados em Code/deployment/.
+**Rubrica 4: tratamento de erros.** Exceções HTTP específicas por cenário
+(`Code/api/erros.py`, `Code/api/routers/texto.py`), declaradas no `/docs` e cobertas por
+testes com modelo falso (`Code/api/tests/`):
 
-Customer Acceptance:
-    Confronto da entrega com as metas da seção 1 e com o público descrito no
-    charter. No contexto acadêmico, o avaliador exerce esse papel.
+| Código | Cenário |
+|---|---|
+| 422 | texto com menos de 50 ou mais de 2.000 caracteres, campo extra ou tipo de análise inválido |
+| 502 | o modelo devolveu resumo vazio |
+| 503 | o modelo não carregou na subida (as demais rotas seguem no ar) |
+| 504 | geração acima de 120 s |
+| 500 | erro inesperado: mensagem com código de rastreio; o traceback fica só no log |
 
-Papéis no eixo vertical:
-    Líder do projeto: escopo, charter e critérios de sucesso. Data Scientist e
-    Data Engineer: fontes, extração, qualidade dos dados e indicadores.
-    Solution Architect: estrutura TDSP, ambiente de execução e arquitetura do
-    Streamlit.
+**Rubrica 5: escolha do modelo.** Critérios: desempenho (qualidade do resumo em português),
+custo computacional (cabe em 8 GB de RAM sem GPU, tempo por resumo aceitável) e
+acessibilidade (licença aberta, sem conta, ~1,5 GB). O Qwen2.5-1.5B foi descartado antes da medição, porque travou a máquina sem terminar o
+primeiro texto. Os outros dois foram medidos num banco de 10 textos (7 justificativas do
+ODS 9 e 3 resumos de referência; saídas em `Data/modeled/`): o Qwen2.5-0.5B-Instruct e o
+Qwen3-0.6B. O Qwen3-0.6B foi escolhido, porque errou menos nos textos do tema, e não por
+ser o mais rápido ou o mais leve. Justificativa completa, medições e erros encontrados em
+`Docs/Escolha_do_modelo.md`, que também registra o uso de IA.
 
-# 3. Funcionalidades entregues nesta etapa
+**Limites:** o resumo é gerado por modelo e exige revisão humana antes de ser usado como fato;
+textos em inglês podem gerar resumos que repetem o título. O **Streamlit Cloud não roda o
+modelo**: a aplicação publicada lê as fontes direto, sem a API; a rota de texto só existe com a
+API local.
 
-Nesta etapa o painel passou a expor os dados por uma API FastAPI local.
-Antes, Início, Série histórica e Contexto ODS 9 liam SIDRA, Ipeadata e os
-arquivos em Data/raw/ direto; a Comparação internacional lia o CSV do
-DataBank no próprio Streamlit. Agora essas páginas consultam a FastAPI
-quando ela está no ar (GET /fatos/resumo, GET /serie/transformacao,
-GET /ods9/metas). O CSV da Comparação internacional continua a ser
-enviado pelo usuário; a mudança é o caminho: POST /world-bank recebe o
-arquivo, a API o valida e grava, e GET /world-bank/{id} devolve os dados
-para os gráficos. Se a API não responder, o painel volta à leitura
-direta.
+## 5. Como rodar (Windows)
 
-A aplicação é um painel Streamlit com múltiplas páginas: Scripts/app.py é o
-ponto de entrada (página Início) e as demais páginas estão em Scripts/pages/.
-O menu lateral agrupa as páginas em Painel, Comparações e contexto, e Método.
-A relação a seguir indica onde cada entrega desta etapa se encontra no
-repositório.
+Na pasta do projeto, nesta ordem (passos 1 a 3 obrigatórios; o 4 mostra o painel). Se o
+PowerShell bloquear a ativação do ambiente, chame o Python do `.venv` direto, como abaixo.
 
-Ambiente e organização:
-    O arquivo requirements.txt fixa as versões das dependências; o .gitignore
-    exclui `.venv/`, `__pycache__/`, `.env` e `.streamlit/secrets.toml`; as
-    notas de implantação estão em Code/deployment/. A estrutura de pastas
-    segue o TDSP, descrita na seção 4.
+1. **Ambiente e dependências** (uma vez):
+   ```
+   python -m venv .venv
+   .venv\Scripts\python.exe -m pip install -r requirements.txt
+   ```
+2. **Baixar o modelo** (uma vez, com internet, ~1,5 GB; sem isto a rota de texto responde 503):
+   ```
+   .venv\Scripts\python.exe Code\modeling\baixar_modelo.py
+   ```
+3. **Subir a API** (terminal aberto; docs em http://127.0.0.1:8000/docs). Com `--reload`, cada
+   arquivo salvo recarrega o modelo; para uso contínuo, rode sem ele:
+   ```
+   .venv\Scripts\python.exe -m uvicorn Code.api.main:app --reload
+   ```
+4. **Subir o painel** (outro terminal):
+   ```
+   .venv\Scripts\python.exe -m streamlit run Scripts/app.py
+   ```
 
-Controle de versão e preparação para deploy:
-    O projeto é versionado com Git, na branch main, e publicado no
-    Streamlit Community Cloud a partir deste repositório (link no início
-    deste README). O ambiente de execução é reprodutível a partir de
-    requirements.txt em uma virtualenv, conforme a seção 5, e o ponto de
-    entrada do deploy é Scripts/app.py, descrito em
-    Code/deployment/README.md. A API FastAPI roda só em ambiente local.
-
-Interface interativa:
-    O menu tem seis páginas em três seções. Panorama setorial usa o acumulado
-    dos últimos quatro trimestres, mostra agropecuária, indústria, serviços e
-    impostos (que somam o PIB) e isola a transformação como "dos quais";
-    Série histórica dispõe de seletor de intervalo de anos e consome
-    GET /serie/transformacao; Comparação internacional recebe o CSV do
-    DataBank pelo upload (POST /world-bank e GET /world-bank/{id} quando a
-    API está no ar); Contexto ODS 9 dispõe de seleção da meta, nuvem de
-    palavras e aba Corpus; Fontes e método resume as fontes e o status da
-    API local. Início, Série histórica, Comparação internacional e Contexto
-    ODS 9 indicam a origem do dado (API FastAPI ou leitura direta).
-
-API FastAPI:
-    Code/api/main.py reúne routers em Code/api/routers/ e modelos Pydantic
-    em Code/api/models.py (response_model em todas as rotas; POST /world-bank
-    devolve 201). A consulta de dados é GET (saúde, série de transformação,
-    World Bank por id, metas do ODS 9 e fatos/resumo). O envio de novos
-    dados é POST /world-bank: recebe o CSV do DataBank que a Comparação
-    internacional usa nos gráficos. As rotas estão descritas em
-    Code/api/README.md e em /docs. O cliente está em Scripts/cliente_api.py.
-
-Extração de conteúdo da web com Beautiful Soup:
-    O script Code/data_acquisition/scrape_ods9.py é executado separadamente da
-    aplicação e grava Data/raw/ods9_metas.csv e Data/raw/ods9_corpus.txt.
-    Nesta etapa esses dados foram aprimorados: as metas do ODS 9 passaram a
-    ser servidas pela API (GET /ods9/metas e GET /ods9/metas/{codigo}),
-    reunidas na aba Corpus e preparadas como base de Q&A e resumo para a
-    etapa de LLM. Como nenhuma fonte exige interação dinâmica, a coleta
-    seguiu a orientação de manter a simplicidade, sem Selenium; a
-    justificativa está em Docs/Data_Summary_Report.md.
-
-Exibição do conteúdo extraído:
-    A página Contexto ODS 9 apresenta o texto da meta selecionada, a nuvem de
-    palavras, a frequência e, na aba Corpus, as metas extraídas. As
-    estatísticas das séries vêm de GET /fatos/resumo na
-    página Início.
-
-Cache e estado de sessão:
-    As funções de carga em Scripts/dados.py utilizam st.cache_data, com tempo
-    de expiração de uma hora nas consultas de SIDRA e Ipeadata, envolvendo
-    Scripts/nucleo.py. As respostas da API FastAPI também entram em cache.
-    O arquivo CSV enviado pelo usuário é mantido em st.session_state na página
-    Comparação internacional.
-
-Serviço de upload e download de arquivos:
-    O componente st.file_uploader, na página Comparação internacional, recebe o
-    CSV do DataBank. Com a API no ar, o arquivo vai para POST /world-bank e
-    os dados voltam de GET /world-bank/{id}; sem ela, o painel lê o CSV
-    direto. Em ambos os casos o envio alimenta filtros, gráficos e tabela.
-    Para download, a aplicação disponibiliza o CSV de exemplo, o recorte
-    filtrado, as tabelas do SIDRA e do Ipeadata (com fonte, código da série e
-    data de extração anexados), o arquivo TXT do texto extraído do Ipea e o
-    recorte do corpus na aba Corpus.
-
-Documentação do projeto:
-    Docs/Project_Charter.md apresenta escopo, objetivos, entregas, preparação
-    para IA, stakeholders e riscos; Docs/Data_Summary_Report.md apresenta a
-    hierarquia das fontes, as ressalvas de método, a decisão sobre Selenium e
-    a ficha de cada fonte com o respectivo objetivo de uso.
-
-# 4. Estrutura de diretórios
-
-A árvore abaixo segue as fases do TDSP. Cada pasta de código e de dados possui
-um README próprio, que descreve o conteúdo nela armazenado.
-
+**Opcional — regerar os dados extraídos** (já estão em `Data/raw/`):
 ```
-monitor-desindustrializacao/
-    Docs/                      # Business Understanding e relatórios
-        Project_Charter.md
-        Data_Summary_Report.md
-        Referencias.md
-    Data/
-        raw/                   # dados brutos
-        processed/             # POST /world-bank (envios do DataBank)
-        modeled/               # saídas de modelagem
-    Code/
-        api/                   # FastAPI local (main, models, routers)
-        data_acquisition/      # extração fora do app (scraping do ODS 9)
-        data_exploration/      # entendimento e EDA
-        modeling/              # modelos
-        deployment/            # empacotamento / notas de implantação
-    Scripts/
-        app.py                 # visão geral do dashboard Streamlit
-        nucleo.py              # carga e transformação (sem Streamlit)
-        dados.py               # cache Streamlit sobre nucleo.py
-        cliente_api.py         # GET/POST na FastAPI com fallback
-        interface.py           # avisos, métrica, gráficos e download
-        assets/                # ícone do ODS 9
-        pages/                 # páginas do painel
-    requirements.txt
-    .gitignore                 # ambiente virtual, cache e segredos
-    README.MD
-```
-### OBS: As pastas de exploração e modelagem seguem reservadas para as próximas etapas; o tratamento das séries ocorre em Scripts/nucleo.py. Data/processed/ guarda os arquivos recebidos pela API.
-
-# 5. Como rodar a aplicação (Windows) em ordem:
-
-```
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python Code/data_acquisition/scrape_ods9.py
-uvicorn Code.api.main:app --reload
+.venv\Scripts\python.exe Code\data_acquisition\scrape_ods9.py
+.venv\Scripts\python.exe Code\data_acquisition\scrape_referencias.py
 ```
 
-Em outro terminal, com o mesmo ambiente virtual:
+**Testes** (da raiz do projeto):
 
 ```
-streamlit run Scripts/app.py
+.venv\Scripts\python.exe -m unittest discover -s Code\api\tests -t .
 ```
 
-A API fica em http://127.0.0.1:8000 e a documentação interativa em
-http://127.0.0.1:8000/docs. Com a API no ar, Início, Série histórica,
-Comparação internacional e Contexto ODS 9 mostram "Origem: API FastAPI".
-Sem ela, mostram "Origem: leitura direta" e continuam funcionando. A
-página Fontes e método indica quando o serviço está fora. Exemplos de
-curl estão em Code/api/README.md.
+Teste com o modelo real (demora cerca de 1 minuto):
+
+```
+$env:RODAR_MODELO_REAL = "1"
+.venv\Scripts\python.exe -m unittest Code.api.tests.test_modelo_real -v
+```
+
+Sem a API, o painel mostra "Origem: leitura direta" e segue funcionando; só a aba Resumo
+exige a API. Exemplos de chamadas e testes: `Code/api/README.md`.
+
+## 6. Estrutura de diretórios
+
+Cada pasta de código e de dados tem um README próprio.
+
+```
+Docs/                 # Project_Charter, Data_Summary_Report, Referencias, Escolha_do_modelo
+Data/
+    raw/              # dados brutos (inclui referências para o teste do modelo)
+    processed/        # envios do POST /world-bank
+    modeled/          # resumos gerados nas medições do modelo
+Code/
+    api/              # FastAPI: main, models, erros, routers/, tests/
+    data_acquisition/ # scraping (ODS 9 e referências)
+    data_exploration/ # entendimento e EDA (reservada)
+    modeling/         # resumidor, baixar_modelo, medir_modelo
+    deployment/       # notas de implantação
+Scripts/              # app.py, nucleo.py, dados.py, cliente_api.py, interface.py, pages/, assets/
+requirements.txt
+.gitignore
+README.MD
+```

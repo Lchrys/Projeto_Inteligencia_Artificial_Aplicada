@@ -17,3 +17,13 @@ Gerados por `Code/data_acquisition/scrape_ods9.py`.
   na Comparação internacional.
 - `world_bank_setorial_metadata.csv`: ficha técnica das séries. Não é lido
   pelo app.
+
+## Referências sobre desindustrialização (TP4)
+
+Gerados por `Code/data_acquisition/scrape_referencias.py`, a partir das URLs de
+`referencias_urls.txt` (uma por linha, curadas à mão).
+
+- `referencias_urls.txt`: as páginas dos três periódicos usados (SciELO, Springer e FGV).
+- `referencias_resumos.csv`: título, autores, ano, periódico, DOI, resumo, idioma do resumo, licença e data de coleta de cada referência.
+
+A licença de cada linha depende do periódico. Ver "Estudos publicados" em `Docs/Data_Summary_Report.md`.

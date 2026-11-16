@@ -4,7 +4,19 @@
 
 O TP3 não acrescenta fonte oficial nova. Início, Série histórica e Contexto ODS 9 obtêm os mesmos dados pela API FastAPI do projeto (`GET /fatos/resumo`, `GET /serie/transformacao`, `GET /ods9/metas`). A Comparação internacional envia o CSV do DataBank por `POST /world-bank` e consulta o envio em `GET /world-bank/{id}`. Se a API não responder, `Scripts/cliente_api.py` lê direto de `Scripts/nucleo.py`. Cada página indica a origem. O Panorama passa a somar os últimos quatro trimestres (`periodos/-4`). O CSV continua a ser enviado pelo usuário; nada é pré-carregado.
 
-Os dados extraídos com Beautiful Soup (Fonte 5) foram aprimorados nesta etapa: as metas do ODS 9 passaram a ser servidas pela API (`GET /ods9/metas` e `GET /ods9/metas/{codigo}`), reunidas na aba Corpus da página Contexto ODS 9 e preparadas como base de Q&A e resumo para a etapa de LLM. O recorte (indicador 9.2.1 e as metas do ODS 9) já está coberto pelas Fontes 1 a 5. A página ODS 8 do Ipea, no mesmo layout, fica como possibilidade futura se o painel passar a documentar o pilar Social e o indicador 9.2.2. A decisão sobre Selenium está na seção própria, abaixo da Fonte 5.
+Os dados extraídos com Beautiful Soup (Fonte 5) foram aprimorados no TP3: as metas do ODS 9 passaram a ser servidas pela API (`GET /ods9/metas` e `GET /ods9/metas/{codigo}`), reunidas na aba Corpus da página Contexto ODS 9 e preparadas como base de Q&A e resumo para a etapa de LLM. O recorte (indicador 9.2.1 e as metas do ODS 9) já está coberto pelas Fontes 1 a 5. A página ODS 8 do Ipea, no mesmo layout, fica como possibilidade futura se o painel passar a documentar o pilar Social e o indicador 9.2.2. A decisão sobre Selenium está na seção própria, abaixo da Fonte 5.
+
+# Revisão no TP4
+
+O TP4 não acrescenta fonte oficial numérica. O corpus textual do modelo de linguagem tem três origens, todas já descritas nesta seção:
+
+- **Metas do ODS 9** (Fonte 5, `Data/raw/ods9_metas.csv`): as justificativas de cada meta são o principal insumo de resumo. Usadas sete das oito metas, porque a 9.a tem justificativa de 34 caracteres.
+- **Resumos das referências** (seção "Estudos publicados"): Morceiro (2021), em português, e Rodrik (2016), em inglês, pela FGV e pelo Springer, coletados por `Code/data_acquisition/scrape_referencias.py`.
+- **Introdução do Oreiro e Feijó (2010)**: lida ao vivo da página do SciELO, em português, e usada como entrada do modelo. O texto não é gravado no projeto; o CSV guarda só o resumo gerado.
+
+O modelo lê esses textos, e não as séries numéricas. As séries (Fontes 1 a 4) continuam sendo a base de todos os números do painel. O modelo não recebe nem calcula valores de série; quando o relatório a partir de `/fatos/resumo` for implementado, o modelo só redigirá a partir do JSON que o código calcula.
+
+Licenças por periódico: ver "Estudos publicados". O uso dos resumos é de citação, e o do SciELO é restrito a fins não comerciais (CC BY-NC 4.0).
 
 # Hierarquia das fontes
 
@@ -22,7 +34,7 @@ Valem para todo o painel. Detalhe e bibliografia em [Referencias.md](Referencias
 2. No SIDRA, "indústria" (código 90691) é o agregado (extrativa, transformação, construção e utilities); transformação é o código 90693. O agregado pode se sustentar enquanto a manufatura recua.
 3. As séries do SIDRA e do Ipeadata estão a preços correntes, então a participação setorial no PIB também se move por preço relativo, e não apenas por volume produzido (Oreiro e Feijó, 2010; Morceiro, 2021).
 4. A redação da ONU para a meta 9.2 pede aumentar a participação da indústria no PIB e no emprego. A redação adaptada pelo Ipea deslocou o foco para produtividade e complexidade tecnológica. As séries medem o indicador da ONU; o texto do Ipea entra como ressalva oficial brasileira.
-5. O painel cobre o componente "em proporção do PIB" do indicador 9.2.1; o componente per capita não entra nesta etapa.
+5. O painel cobre o componente "em proporção do PIB" do indicador 9.2.1; o componente per capita não entra no TP3.
 6. Só de 1995 em diante os níveis das Contas Nacionais brasileiras são comparáveis. Há quebras em 1989–90 e 1994–95 por mudança de referência, não por desindustrialização (Morceiro, 2021).
 
 Formas de extração: SIDRA (Fontes 1 e 2) e Ipeadata (Fonte 3) são consultados por API, ao vivo, com cache de uma hora. A página ODS 9 do Ipea (Fonte 5) é extraída por scraping em script separado. O World Bank (Fonte 4) entra por arquivo exportado do DataBank: o exemplo fica em `Data/raw/`, e o usuário o envia no painel. A API FastAPI do próprio projeto (`Code/api/main.py`) consulta SIDRA e Ipeadata, lê as metas extraídas e recebe o CSV do DataBank por `POST /world-bank`, gravado em `Data/processed/world_bank_envios/`. Em nenhum caso há valor digitado à mão nas séries oficiais: as tabelas baixadas do painel registram fonte, código da série e data de extração.
@@ -86,7 +98,7 @@ Objetivo de uso: contextualizar o recorte do painel. O indicador 9.2.1 extraído
 
 # Decisão sobre Selenium
 
-O Selenium não foi usado nesta etapa porque nenhuma fonte do projeto depende de interação com a página ou de conteúdo carregado por JavaScript:
+O Selenium não foi usado no TP3 porque nenhuma fonte do projeto depende de interação com a página ou de conteúdo carregado por JavaScript:
 
 - IBGE/SIDRA e Ipeadata são consultados por API e devolvem JSON estruturado.
 - O World Bank entra por arquivo exportado do DataBank, guardado em `Data/raw/`.
@@ -114,4 +126,10 @@ Objetivo de uso: acrescentar ao dashboard uma leitura de curto prazo da indústr
 
 ## Estudos publicados
 
-Fonte: artigos já publicados sobre desindustrialização brasileira. Não é extração por API. A validação cruzada desta etapa usa Morceiro (2021), confrontado com a série do Ipeadata na Fonte 3. Demais referências (Tregenna, Oreiro e Feijó, Palma, Rodrik, Rowthorn e Ramaswamy) estão em [Referencias.md](Referencias.md).
+Fonte: resumos publicados nas páginas dos periódicos das referências sobre desindustrialização, extraídos por web scraping com BeautifulSoup em `Code/data_acquisition/scrape_referencias.py`. Não é consulta de API nem leitura de PDF: o script lê apenas os metadados `citation_*` e `DC.Description` de cada página e grava `Data/raw/referencias_resumos.csv`, com título, autores, ano, periódico, DOI, resumo, idioma do resumo e data de coleta.
+
+Quais referências entram, e por quê. Entram três: Oreiro e Feijó (2010), SciELO; Rodrik (2016), Springer; e Morceiro (2021), periódico da FGV. Os três permitem leitura automatizada de `/j/rep/`, `/article/` e `/bjpe/` nos respectivos `robots.txt` para um identificador genérico. O Springer bloqueia o restante do site por padrão e libera `/article/`, que é o caminho dos artigos; o `robots.txt` também bloqueia bots de IA nomeados. Ficaram de fora: Tregenna (2009), no Oxford Academic, e Palma (2005), no repositório da CEPAL, que devolvem 403 com desafio do Cloudflare; o script não contorna esse bloqueio. Rowthorn e Ramaswamy (1999), no FMI, foi excluído por decisão do autor do projeto.
+
+Idioma e limites. Oreiro e Feijó e Rodrik têm resumo em inglês, porque a página só traz essa versão. Morceiro tem resumo em português na página da FGV, e é o único usado em português. Os resumos são curtos, de 450 a 1.100 caracteres, e a coleta não traz o texto integral. Licença por periódico, conforme a página do artigo. SciELO: CC BY-NC 4.0 (selo verificado no HTML), reuso não comercial com atribuição. Springer: sem licença aberta; a seção "Rights and permissions" só leva ao Copyright Clearance Center, para reprodução paga, e não define o uso do resumo. Ausência de cláusula não equivale a permissão: o resumo do Springer é usado só com citação. FGV: a página não declara licença; o resumo em português também é usado só com citação. Os termos gerais de cada site não foram lidos na íntegra.
+
+Uso: a validação cruzada desta etapa usa Morceiro (2021), confrontado com a série do Ipeadata na Fonte 3. A coleta alimenta o corpus textual do LLM (resumo e Q&A sobre a literatura), que complementa as metas do ODS 9. Referências completas estão em [Referencias.md](Referencias.md).

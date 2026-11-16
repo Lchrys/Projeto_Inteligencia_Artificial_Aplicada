@@ -1,6 +1,6 @@
 # Data Acquisition (TDSP)
 
-A aquisição de dados do projeto tem três formas. O Selenium não entra nesta
+A aquisição de dados do projeto tem quatro formas (seções 1 a 4). O Selenium não entra nesta
 etapa; a decisão está em Docs/Data_Summary_Report.md.
 
 Resumo. Fichas e ressalvas: Docs/Data_Summary_Report.md.
@@ -35,3 +35,15 @@ NV.SRV.TOTL.ZS, NV.IND.MANF.KD.ZG e TX.VAL.TECH.MF.ZS; e o período na aba Time.
 
 O Banco Central (SGS) está mapeado no Data Summary Report, mas não entra na
 extração desta etapa.
+
+## 4. scrape_referencias.py (TP4)
+
+Lê título, autores, ano, periódico, DOI e resumo das referências sobre
+desindustrialização (SciELO, Springer e FGV), a partir de `Data/raw/referencias_urls.txt`.
+Usa BeautifulSoup e os metadados `citation_*` e `DC.Description` de cada página, e grava
+`Data/raw/referencias_resumos.csv`. Se um site responder com bloqueio (403 ou 429),
+o script para e não contorna. Rodar da raiz do projeto:
+
+```
+python Code/data_acquisition/scrape_referencias.py
+```
