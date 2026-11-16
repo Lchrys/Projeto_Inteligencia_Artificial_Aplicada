@@ -16,9 +16,9 @@ from dados import (
 from interface import botao_download, configurar_pagina, sobre_os_dados
 from nucleo import documentos_ods9, filtrar_documentos
 
-configurar_pagina("Contexto ODS 9")
+configurar_pagina("Corpus e resumos")
 
-st.title("Contexto ODS 9")
+st.title("Corpus e resumos")
 st.caption(
     "O que a meta 9.2 pede, e como a redação brasileira diverge da ONU."
 )

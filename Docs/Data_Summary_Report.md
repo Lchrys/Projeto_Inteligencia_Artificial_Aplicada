@@ -2,9 +2,9 @@
 
 # Revisão no TP3
 
-O TP3 não acrescenta fonte oficial nova. Início, Série histórica e Contexto ODS 9 obtêm os mesmos dados pela API FastAPI do projeto (`GET /fatos/resumo`, `GET /serie/transformacao`, `GET /ods9/metas`). A Comparação internacional envia o CSV do DataBank por `POST /world-bank` e consulta o envio em `GET /world-bank/{id}`. Se a API não responder, `Scripts/cliente_api.py` lê direto de `Scripts/nucleo.py`. Cada página indica a origem. O Panorama passa a somar os últimos quatro trimestres (`periodos/-4`). O CSV continua a ser enviado pelo usuário; nada é pré-carregado.
+O TP3 não acrescenta fonte oficial nova. Início, Série histórica e Corpus e resumos obtêm os mesmos dados pela API FastAPI do projeto (`GET /fatos/resumo`, `GET /serie/transformacao`, `GET /ods9/metas`). A Comparação internacional envia o CSV do DataBank por `POST /world-bank` e consulta o envio em `GET /world-bank/{id}`. Se a API não responder, `Scripts/cliente_api.py` lê direto de `Scripts/nucleo.py`. Cada página indica a origem. O Panorama passa a somar os últimos quatro trimestres (`periodos/-4`). O CSV continua a ser enviado pelo usuário; nada é pré-carregado.
 
-Os dados extraídos com Beautiful Soup (Fonte 5) foram aprimorados no TP3: as metas do ODS 9 passaram a ser servidas pela API (`GET /ods9/metas` e `GET /ods9/metas/{codigo}`), reunidas na aba Corpus da página Contexto ODS 9 e preparadas como base de Q&A e resumo para a etapa de LLM. O recorte (indicador 9.2.1 e as metas do ODS 9) já está coberto pelas Fontes 1 a 5. A página ODS 8 do Ipea, no mesmo layout, fica como possibilidade futura se o painel passar a documentar o pilar Social e o indicador 9.2.2. A decisão sobre Selenium está na seção própria, abaixo da Fonte 5.
+Os dados extraídos com Beautiful Soup (Fonte 5) foram aprimorados no TP3: as metas do ODS 9 passaram a ser servidas pela API (`GET /ods9/metas` e `GET /ods9/metas/{codigo}`), reunidas na aba Corpus da página Corpus e resumos e preparadas como base de Q&A e resumo para a etapa de LLM. O recorte (indicador 9.2.1 e as metas do ODS 9) já está coberto pelas Fontes 1 a 5. A página ODS 8 do Ipea, no mesmo layout, fica como possibilidade futura se o painel passar a documentar o pilar Social e o indicador 9.2.2. A decisão sobre Selenium está na seção própria, abaixo da Fonte 5.
 
 # Revisão no TP4
 
@@ -94,7 +94,7 @@ Tipo de dado: texto estruturado em HTML. Cada meta vira uma linha com código, r
 
 Volume extraído: 8 metas (9.1 a 9.c), com data de extração registrada em cada linha do CSV, em UTF-8. O script roda à parte; a aplicação apenas lê os arquivos já gravados em `Data/raw/`.
 
-Objetivo de uso: contextualizar o recorte do painel. O indicador 9.2.1 extraído do texto ("valor adicionado da indústria em proporção do PIB") é o mesmo conceito das séries oficiais (IBGE/SIDRA, Ipeadata, World Bank NV.IND.MANF.ZS); o painel cobre só o componente em proporção do PIB, não o per capita. A interface exibe o texto da meta escolhida, a nuvem de palavras e a frequência das palavras. Por padrão, nuvem e frequência usam a meta selecionada (redação da ONU, redação brasileira, justificativa e conceitos); o corpus das oito metas permanece como opção. As metas alimentam a rota `/ods9/metas` e a aba Corpus da página Contexto ODS 9.
+Objetivo de uso: contextualizar o recorte do painel. O indicador 9.2.1 extraído do texto ("valor adicionado da indústria em proporção do PIB") é o mesmo conceito das séries oficiais (IBGE/SIDRA, Ipeadata, World Bank NV.IND.MANF.ZS); o painel cobre só o componente em proporção do PIB, não o per capita. A interface exibe o texto da meta escolhida, a nuvem de palavras e a frequência das palavras. Por padrão, nuvem e frequência usam a meta selecionada (redação da ONU, redação brasileira, justificativa e conceitos); o corpus das oito metas permanece como opção. As metas alimentam a rota `/ods9/metas` e a aba Corpus da página Corpus e resumos.
 
 # Decisão sobre Selenium
 
@@ -110,7 +110,7 @@ Usar um navegador automatizado acrescentaria dependência de navegador e driver,
 
 Não é fonte oficial nova. O `POST /world-bank` valida o CSV do DataBank (colunas `Country Name`, `Country Code`, `Series Name`, `Series Code` e anos no padrão `1990 [YR1990]`), descarta o rodapé, converte para formato longo, gera um identificador e grava `Data/processed/world_bank_envios/{id}.csv`. A página Comparação internacional consulta esse envio em `GET /world-bank/{id}`. Sem a API, o painel processa o arquivo localmente.
 
-A API roda só em ambiente local (`uvicorn`). No Streamlit Community Cloud ela não sobe; Início, Série histórica, Comparação internacional e Contexto ODS 9 caem na leitura direta.
+A API roda só em ambiente local (`uvicorn`). No Streamlit Community Cloud ela não sobe; Início, Série histórica, Comparação internacional e Corpus e resumos caem na leitura direta.
 
 # Fontes previstas
 

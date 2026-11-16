@@ -125,7 +125,7 @@ else:
     st.warning(
         "A API não está no ar. Na raiz do repositório, em outro terminal, rode:\n\n"
         f"`{COMANDO_UVICORN}`\n\n"
-        "Início, Série histórica, Comparação internacional e Contexto ODS 9 "
+        "Início, Série histórica, Comparação internacional e Corpus e resumos "
         "passam a ler os dados direto (SIDRA, Ipeadata, CSV enviado e Data/raw/)."
     )
 st.markdown(
@@ -135,7 +135,7 @@ O que cada página consome quando a API está no ar:
 - **Início:** GET /fatos/resumo (números) e GET /serie/transformacao (gráfico).
 - **Série histórica:** GET /serie/transformacao.
 - **Comparação internacional:** POST /world-bank (CSV do DataBank) e GET /world-bank/{id}.
-- **Contexto ODS 9:** GET /ods9/metas.
+- **Corpus e resumos:** GET /ods9/metas.
 - **Panorama setorial:** SIDRA direto (não passa pela API).
 """
 )

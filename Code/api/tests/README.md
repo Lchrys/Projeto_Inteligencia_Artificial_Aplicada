@@ -13,8 +13,9 @@ e, quando pedido, confirmar a integração com o modelo real.
 Comandos, da raiz do projeto:
 
 ```
-python -m unittest discover -s Code/api/tests -t .
-RODAR_MODELO_REAL=1 python -m unittest Code.api.tests.test_modelo_real -v
+.venv\Scripts\python.exe -m unittest discover -s Code/api/tests -t .
+set RODAR_MODELO_REAL=1
+.venv\Scripts\python.exe -m unittest Code.api.tests.test_modelo_real -v
 ```
 
 Detalhes e a justificativa do teste com modelo real estão em `Code/api/README.md`.

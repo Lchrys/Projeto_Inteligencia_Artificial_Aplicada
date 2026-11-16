@@ -169,14 +169,14 @@ O erro é do tipo que o monitor não pode aceitar: a palavra "transformação" �
 A descrição completa está em `Code/api/README.md`. Resumo dos passos:
 
 1. **Ambiente:** `pip install -r requirements.txt`. Bibliotecas: `transformers` (carregar e gerar), `torch` (execução, versão de CPU), `huggingface_hub` (download), `psutil` (medição de memória, só na medição) e `httpx` (testes). A lista completa está em `Code/api/README.md`. O `torch` é a versão só de CPU, apontada por `--extra-index-url` no próprio arquivo, para o build no Streamlit Cloud não baixar CUDA.
-2. **Download:** `python Code/modeling/baixar_modelo.py` baixa `Qwen/Qwen3-0.6B` (cerca de 1,5 GB) para o cache do Hugging Face, fora do Git.
+2. **Download:** `.venv\Scripts\python.exe Code/modeling/baixar_modelo.py` baixa `Qwen/Qwen3-0.6B` (cerca de 1,5 GB) para o cache do Hugging Face, fora do Git.
 3. **Carga na subida:** `Code/api/main.py` tem um `lifespan` que chama `carregar_na_subida()`. O modelo é lido do disco com `local_files_only=True`, em float32 na CPU. Se a carga falhar, a API sobe mesmo assim e só `POST /processar_texto` responde 503.
 4. **Rota:** `Code/api/routers/texto.py` declara a rota com `def`, porque a geração calcula na CPU e bloquearia o laço assíncrono. A geração roda numa thread separada, com tempo limite de 120 s (504).
 5. **Sem internet:** com `HF_HUB_OFFLINE=1`, a API sobe e responde normalmente, o que prova que a integração é local.
 
 **Ajustes para o hardware:** float32 (cerca de 2,4 GB de RAM, contra 7,7 GB utilizáveis); modo de raciocínio do Qwen3 desligado (`enable_thinking=False`); uma geração por vez, para não disputar a memória de 8 GB.
 
-**Testes:** `python -m unittest discover -s Code/api/tests -t .` cobre 422, 502, 503, 504, 500 e o formato da resposta 200, com modelo falso. O teste com o modelo real (`RODAR_MODELO_REAL=1`) confere a integração de fato: carga na subida, formato da resposta, resumo não vazio, tamanho, tempo e números.
+**Testes:** `.venv\Scripts\python.exe -m unittest discover -s Code/api/tests -t .` cobre 422, 502, 503, 504, 500 e o formato da resposta 200, com modelo falso. O teste com o modelo real (`RODAR_MODELO_REAL=1`) confere a integração de fato: carga na subida, formato da resposta, resumo não vazio, tamanho, tempo e números.
 
 ## 5. Uso de IA
 

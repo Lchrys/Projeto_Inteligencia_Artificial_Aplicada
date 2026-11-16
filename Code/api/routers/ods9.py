@@ -15,7 +15,7 @@ router = APIRouter(prefix="/ods9", tags=["ODS 9"])
     response_model=MetasOut,
     summary="Lista as metas do ODS 9 extraídas do Ipea",
     description="Lê Data/raw/ods9_metas.csv, gerado pelo scraping com "
-    "Beautiful Soup da página ODS 9 do Ipea. A página Contexto ODS 9 "
+    "Beautiful Soup da página ODS 9 do Ipea. A página página Corpus e resumos "
     "consome esta rota.",
 )
 def get_ods9_metas() -> dict:

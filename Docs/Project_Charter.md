@@ -24,7 +24,7 @@ que o usuário envia no painel, a partir do export do DataBank disponível em
 `Data/raw/`. A API FastAPI local consulta essas fontes (GET) e recebe o
 CSV do DataBank (POST /world-bank), gravado em `Data/processed/`
 depois da validação. Início, Série histórica, Comparação internacional e
-Contexto ODS 9 consomem a API quando ela está no ar e caem na leitura
+Corpus e resumos consomem a API quando ela está no ar e caem na leitura
 direta quando não está.
 
 Não entra neste projeto (fora do escopo):
@@ -69,7 +69,7 @@ Não entra no TP3 (adiado, não descartado):
 O problema de negócio continua a evidência oficial dispersa. No TP3
 o painel também oferece acesso programático às séries e aos textos, pela
 API FastAPI local (`Code/api/`, com modelos Pydantic e routers). Início,
-Série histórica, Comparação internacional e Contexto ODS 9 consomem
+Série histórica, Comparação internacional e Corpus e resumos consomem
 essas rotas (`Scripts/cliente_api.py`). Se o serviço não responder (caso
 do Streamlit Community Cloud), a mesma função cai na leitura direta em
 `Scripts/nucleo.py`. Cada página indica a origem do dado.
@@ -86,7 +86,7 @@ Selenium está no Data Summary Report.
 
 Entregue no TP2: ambiente e estrutura TDSP; controle de versão em Git, com repositório no GitHub e `.gitignore` do ambiente virtual e dos segredos; painel publicado no Streamlit Community Cloud a partir da branch main (link no início do [README.MD](../README.MD)); extração via API de IBGE/SIDRA e Ipeadata; scraping da página ODS 9 do Ipea em script separado, com CSV e TXT em `Data/raw/`; World Development Indicators exportado do DataBank para `Data/raw/` como exemplo; interface Streamlit interativa com cache e estado de sessão; serviço de upload e download de CSV na página Comparação internacional, em que o arquivo enviado passa a alimentar os filtros e os gráficos da comparação internacional; download das tabelas oficiais, do recorte filtrado e do CSV de exemplo, com fonte, código da série e data de extração anexados; nuvem de palavras e frequência a partir do conteúdo extraído da web, com recorte na meta selecionada.
 
-Entregue no TP3: API FastAPI local com modelos de resposta e routers; Início, Série histórica, Comparação internacional e Contexto ODS 9 consomem a API, com fallback para leitura direta; menu em seções; POST /world-bank recebe o CSV do DataBank e GET /world-bank/{id} o consulta; aba Corpus na Contexto ODS 9 (metas extraídas); Panorama em quatro trimestres, com a transformação isolada da indústria; Comparação internacional alimentada pelo CSV enviado pelo usuário; lógica compartilhada em `Scripts/nucleo.py`; envios do DataBank em `Data/processed/world_bank_envios/`; decisão documentada de não usar Selenium; preparação concreta para LLM; critérios de sucesso verificados na página Fontes e método.
+Entregue no TP3: API FastAPI local com modelos de resposta e routers; Início, Série histórica, Comparação internacional e Corpus e resumos consomem a API, com fallback para leitura direta; menu em seções; POST /world-bank recebe o CSV do DataBank e GET /world-bank/{id} o consulta; aba Corpus na página Corpus e resumos (metas extraídas); Panorama em quatro trimestres, com a transformação isolada da indústria; Comparação internacional alimentada pelo CSV enviado pelo usuário; lógica compartilhada em `Scripts/nucleo.py`; envios do DataBank em `Data/processed/world_bank_envios/`; decisão documentada de não usar Selenium; preparação concreta para LLM; critérios de sucesso verificados na página Fontes e método.
 
 Entregue no TP4: `POST /processar_texto` na API FastAPI local, com um modelo de linguagem local (`Qwen/Qwen3-0.6B`, na CPU) que gera resumos em português; modelos de entrada e saída em `Code/api/models.py`; códigos 422, 502, 503, 504 e 500 documentados e testados; corpus textual ampliado com os resumos das referências (`Code/data_acquisition/scrape_referencias.py`, em `Data/raw/referencias_resumos.csv`). A escolha do modelo está em `Docs/Escolha_do_modelo.md`.
 
@@ -102,8 +102,8 @@ avaliação:
 
 | Caso | Dado de entrada | Rota | Página | Critério de avaliação |
 |---|---|---|---|---|
-| Q&A | Metas do ODS 9 (`ods9_metas.csv`) | GET /ods9/metas | Contexto ODS 9 (abas Meta e Corpus) | A resposta cita o código da meta usado |
-| Resumo | Campo justificativa de cada meta | GET /ods9/metas/{codigo} | Contexto ODS 9 | O texto resumido cobre só a justificativa da meta pedida |
+| Q&A | Metas do ODS 9 (`ods9_metas.csv`) | GET /ods9/metas | Corpus e resumos (abas Meta e Corpus) | A resposta cita o código da meta usado |
+| Resumo | Campo justificativa de cada meta | GET /ods9/metas/{codigo} | Corpus e resumos | O texto resumido cobre só a justificativa da meta pedida |
 | Relatório | Último valor, variação desde 1995, máximo, ranking (entre as economias do CSV de exemplo, não mundial) | GET /fatos/resumo | Início | Nenhum número fora do JSON; o LLM só redige; o ranking usa `universo` e `nota` |
 
 Classificação de sentimentos não entra no plano: as fontes desta etapa
@@ -135,7 +135,7 @@ Não há chave neste repositório.
 - Indisponibilidade temporária das APIs (SIDRA, Ipeadata). A comparação
   internacional depende do arquivo enviado pelo usuário, e por isso não
   depende da disponibilidade dessas APIs: se SIDRA e Ipeadata caírem, o
-  painel mantém a página Comparação internacional e a página Contexto ODS 9.
+  painel mantém a página Comparação internacional e a página Corpus e resumos.
 - API FastAPI local fora do ar: o Streamlit Community Cloud não a executa.
   A página Fontes e método avisa e o restante do painel segue lendo as
   fontes oficiais diretamente.

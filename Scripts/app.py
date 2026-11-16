@@ -138,7 +138,7 @@ historico = st.Page("pages/2_Serie_historica.py", title="Série histórica")
 internacional = st.Page(
     "pages/3_Comparacao_internacional.py", title="Comparação internacional"
 )
-ods9 = st.Page("pages/4_Contexto_ODS9.py", title="Contexto ODS 9")
+ods9 = st.Page("pages/4_Corpus_e_resumos.py", title="Corpus e resumos")
 fontes = st.Page("pages/5_Fontes_e_metodo.py", title="Fontes e método")
 
 pg = st.navigation(

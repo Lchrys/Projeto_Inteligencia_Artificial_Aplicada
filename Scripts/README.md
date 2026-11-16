@@ -12,4 +12,4 @@ Objetivo: o painel que o usuário vê. Cada arquivo tem um papel:
 - `assets/`: imagens usadas no painel.
 - `pages/`: as páginas do menu (ver `pages/README.md`).
 
-Para rodar: `streamlit run Scripts/app.py`, da raiz do projeto (ver seção 5 do README da raiz).
+Para rodar: `.venv\Scripts\python.exe -m streamlit run Scripts/app.py`, da raiz do projeto (ver seção 5 do README da raiz).

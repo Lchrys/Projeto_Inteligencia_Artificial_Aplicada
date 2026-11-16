@@ -108,7 +108,7 @@ def grafico_linha(
                 )
                 .encode(x="ano:Q", text="rotulo:N")
             )
-    st.altair_chart(alt.layer(*camadas).configure_axis(grid=True), use_container_width=True)
+    st.altair_chart(alt.layer(*camadas).configure_axis(grid=True), width="stretch")
 
 
 def aviso_quebra(inicio: int, fim: int) -> None:

@@ -4,7 +4,7 @@ Este README foi redigido com apoio de IA (Claude Opus 5.5 e Claude Haiku 5.5) e 
 
 API local para consultar as séries oficiais e os textos do ODS 9, e para
 receber o CSV do DataBank. O painel consome estas rotas em Início, Série
-histórica, Comparação internacional e Contexto ODS 9
+histórica, Comparação internacional e Corpus e resumos
 (`Scripts/cliente_api.py`). Se o serviço não responder, as páginas leem
 direto de `Scripts/nucleo.py`. O Streamlit Community Cloud não sobe esta API.
 
@@ -18,11 +18,10 @@ Documentação interativa gerada pelo FastAPI: http://127.0.0.1:8000/docs
 ## Como subir (Windows, na raiz do repositório)
 
 ```
-.venv\Scripts\activate
-uvicorn Code.api.main:app --reload
+.venv\Scripts\python.exe -m uvicorn Code.api.main:app --reload
 ```
 
-O serviço fica em http://127.0.0.1:8000. Em outro terminal, `streamlit run Scripts/app.py`.
+O serviço fica em http://127.0.0.1:8000. Em outro terminal, `.venv\Scripts\python.exe -m streamlit run Scripts/app.py`.
 
 A URL pode ser alterada no painel por `API_URL` em `.streamlit/secrets.toml`.
 O padrão é `http://127.0.0.1:8000`.
@@ -71,7 +70,7 @@ curl "http://127.0.0.1:8000/world-bank/{id}?pais=BRA&indicador=NV.IND.MANF.ZS&in
 
 ### GET /ods9/metas e GET /ods9/metas/{codigo}
 
-Metas extraídas da página ODS 9 do Ipea. Consumidas pela página Contexto ODS 9.
+Metas extraídas da página ODS 9 do Ipea. Consumidas pela página Corpus e resumos.
 Respostas: `MetasOut` e `MetaDetalheOut`.
 
 ```
@@ -129,7 +128,7 @@ Bibliotecas usadas pelo modelo de linguagem e pela API:
 - `httpx`: cliente que o `TestClient` do FastAPI usa, só nos testes.
 - `fastapi` e `uvicorn`: a API e o servidor que a executa.
 
-1. Instalar as dependências. O `requirements.txt` aponta o `torch` para a versão
+1. Instalar as dependências (Python 3.12, 3.13 ou 3.14; o 3.15 não serve, porque o pandas 3.0.5 não tem pacote pronto para ele). O `requirements.txt` aponta o `torch` para a versão
    só de CPU do PyTorch (`--extra-index-url`), para o build no Streamlit Cloud
    não baixar a versão com CUDA.
    ```
@@ -137,11 +136,11 @@ Bibliotecas usadas pelo modelo de linguagem e pela API:
    ```
 2. Baixar o modelo uma vez, com internet (cerca de 1,5 GB, fora do Git):
    ```
-   python Code/modeling/baixar_modelo.py
+   .venv\Scripts\python.exe Code/modeling/baixar_modelo.py
    ```
 3. Subir a API, da raiz do projeto:
    ```
-   uvicorn Code.api.main:app --reload
+   .venv\Scripts\python.exe -m uvicorn Code.api.main:app --reload
    ```
    Com `--reload`, cada arquivo salvo recarrega o modelo. Para uso contínuo,
    rode sem `--reload`.
@@ -184,14 +183,15 @@ API mostra o mesmo código, junto do traceback completo.
 
 **Testes.** Rodar da raiz do projeto, com o `.venv` ativo ou com o Python do venv:
 ```
-python -m unittest discover -s Code/api/tests -t .
+.venv\Scripts\python.exe -m unittest discover -s Code/api/tests -t .
 ```
 Os testes usam um modelo falso e cobrem 422, 502, 503, 504, 500 e o formato da
 resposta 200.
 
 **Teste com o modelo real** (integração de fato; demora cerca de 1 minuto):
 ```
-RODAR_MODELO_REAL=1 python -m unittest Code.api.tests.test_modelo_real -v
+set RODAR_MODELO_REAL=1
+.venv\Scripts\python.exe -m unittest Code.api.tests.test_modelo_real -v
 ```
 Carrega o Qwen3-0.6B como a API faz na subida, gera resumos de verdade e confere o
 formato da resposta, o tamanho do resumo, o tempo e se os números do resumo estão no

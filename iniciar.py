@@ -15,6 +15,8 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent
 VENV = RAIZ / ".venv"
 PYTHON_DO_VENV = VENV / "Scripts" / "python.exe"
+# Versões com pacotes prontos (wheels) para todas as dependências fixadas, em Windows.
+VERSOES_SUPORTADAS = ["3.13", "3.12", "3.14"]
 
 
 def passo(titulo: str) -> None:
@@ -28,7 +30,18 @@ def rodar(argumentos: list[str]) -> None:
 def main() -> None:
     if not PYTHON_DO_VENV.exists():
         passo("Criando o ambiente .venv")
-        subprocess.run([sys.executable, "-m", "venv", str(VENV)], cwd=RAIZ, check=True)
+        for versao in VERSOES_SUPORTADAS:
+            try:
+                subprocess.run(["py", f"-{versao}", "-m", "venv", str(VENV)], cwd=RAIZ, check=True)
+                break
+            except (FileNotFoundError, subprocess.CalledProcessError):
+                continue
+        else:
+            raise SystemExit(
+                "Nenhuma versão suportada do Python encontrada. Instale o Python 3.13 "
+                "(3.12 ou 3.14 também servem) e rode de novo. O Python 3.15 não serve: "
+                "o pandas 3.0.5 não tem pacote pronto para ele."
+            )
         passo("Instalando as dependências (demora na primeira vez)")
         rodar(["-m", "pip", "install", "-r", "requirements.txt"])
 

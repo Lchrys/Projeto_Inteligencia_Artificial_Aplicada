@@ -18,10 +18,10 @@ com cache de uma hora em Scripts/dados.py. A API FastAPI do projeto
 
 O texto das metas do ODS 9 na página do Ipea é extraído com Beautiful Soup:
 
-python Code/data_acquisition/scrape_ods9.py
+.venv\Scripts\python.exe Code/data_acquisition/scrape_ods9.py
 
 Saídas: Data/raw/ods9_metas.csv e Data/raw/ods9_corpus.txt. Esses arquivos
-alimentam GET /ods9/metas na API e a aba Corpus da página Contexto ODS 9.
+alimentam GET /ods9/metas na API e a aba Corpus da página Corpus e resumos.
 
 ## 3. Arquivo exportado do DataBank
 
@@ -47,5 +47,5 @@ Usa BeautifulSoup e os metadados `citation_*` e `DC.Description` de cada página
 o script para e não contorna. Rodar da raiz do projeto:
 
 ```
-python Code/data_acquisition/scrape_referencias.py
+.venv\Scripts\python.exe Code/data_acquisition/scrape_referencias.py
 ```

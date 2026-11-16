@@ -24,7 +24,7 @@ app = FastAPI(
         "API local (FastAPI) para consultar as séries oficiais do indicador "
         "9.2.1 e os textos do ODS 9, e para receber o CSV do DataBank. "
         "O painel Streamlit consome estas rotas quando a API está no ar "
-        "(Início, Série histórica, Comparação internacional e Contexto ODS 9). "
+        "(Início, Série histórica, Comparação internacional e Corpus e resumos). "
         "Documentação interativa em /docs. Modelos de resposta em "
         "Code/api/models.py."
     ),

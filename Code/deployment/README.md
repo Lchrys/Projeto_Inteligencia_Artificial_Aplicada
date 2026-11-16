@@ -5,7 +5,7 @@ Este README foi redigido com apoio de IA (Claude Opus 5.5 e Claude Haiku 5.5) e 
 A aplicação Streamlit está em Scripts/app.py, ponto de entrada do
 Streamlit Community Cloud. A API FastAPI (Code/api/main.py) roda só em
 ambiente local. No Cloud, Início, Série histórica, Comparação
-internacional e Contexto ODS 9 leem as fontes direto (fallback em
+internacional e Corpus e resumos leem as fontes direto (fallback em
 Scripts/cliente_api.py).
 
 ## Ambiente
@@ -21,24 +21,7 @@ em Windows e Linux (verificado no índice do PyTorch).
 
 ## Execução local (Windows)
 
-```
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python Code/data_acquisition/scrape_ods9.py
-uvicorn Code.api.main:app --reload
-```
-
-Em outro terminal:
-
-```
-streamlit run Scripts/app.py
-```
-
-A URL da API no painel é http://127.0.0.1:8000, substituível por API_URL em
-`.streamlit/secrets.toml`. Sem a API no ar, as páginas mostram
-"Origem: leitura direta" e a página Fontes e método avisa (isso não é
-erro do painel publicado).
+Os passos de instalação, download do modelo e subida da API e do painel estão na seção 5 do README da raiz.
 
 ## Publicação
 

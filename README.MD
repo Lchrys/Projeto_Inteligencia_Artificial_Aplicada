@@ -71,7 +71,7 @@ ela, o painel lê as fontes diretamente.
 | Item | Onde / como |
 |---|---|
 | Ambiente e deploy | `requirements.txt` com versões fixas; `.gitignore` (`.venv/`, `.env`, segredos); Git na `main`; deploy no Streamlit Community Cloud (entrada `Scripts/app.py`; ver `Code/deployment/README.md`) |
-| Interface | 6 páginas em 3 seções: Panorama setorial, Série histórica (seletor de anos), Comparação internacional (upload CSV), Contexto ODS 9 (meta, nuvem de palavras, aba Corpus e aba Resumo com o modelo local), Fontes e método |
+| Interface | 6 páginas em 3 seções: Panorama setorial, Série histórica (seletor de anos), Comparação internacional (upload CSV), Corpus e resumos (meta, nuvem de palavras, aba Corpus e aba Resumo com o modelo local), Fontes e método |
 | API FastAPI | `Code/api/main.py`, routers (ver `Code/api/routers/README.md`) e modelos Pydantic; GET de saúde, série, World Bank, metas ODS 9 e fatos/resumo; `POST /world-bank` (201). Cliente em `Scripts/cliente_api.py` |
 | Web scraping | `Code/data_acquisition/scrape_ods9.py` (Beautiful Soup, sem Selenium: nenhuma fonte é dinâmica) grava `Data/raw/ods9_metas.csv` e `ods9_corpus.txt` (ver `Code/data_acquisition/README.md`) |
 | Cache e sessão | `st.cache_data` (1 h nas consultas SIDRA/Ipeadata e nas respostas da API); CSV enviado em `st.session_state` |
@@ -81,8 +81,8 @@ ela, o painel lê as fontes diretamente.
 ## 4. TP4: API com modelo de linguagem local
 
 A rota **`POST /processar_texto`** resume um texto (50 a 2.000 caracteres) com o
-**`Qwen/Qwen3-0.6B`** (Apache 2.0, sem conta), executado na máquina do usuário, em float32 na
-CPU, sem internet após o download. Na página *Contexto ODS 9*, a aba **Resumo** usa essa rota
+**[`Qwen/Qwen3-0.6B`](https://huggingface.co/Qwen/Qwen3-0.6B)** (Apache 2.0, sem conta), executado na máquina do usuário, em float32 na
+CPU, sem internet após o download. Na página *Corpus e resumos*, a aba **Resumo** usa essa rota
 para resumir uma meta do ODS 9, um resumo de referência ou a introdução de Oreiro e Feijó (2010), em português.
 
 **Integração com o LLM.** `Code/modeling/resumidor.py` carrega o modelo uma vez,
@@ -138,12 +138,23 @@ API local.
 - **`cliente_api.py` com fallback e indicação da origem:** feito, com uma diferença. A função nova `analisar_texto` não tem fallback como as demais: sem a API, a aba Resumo mostra "indisponível" e não indica a origem do dado.
 - **Scraping do ODS 9 igual ao do TP2:** tratado. O projeto ganhou uma fonte e um script novos: o scraping das referências sobre desindustrialização (`Code/data_acquisition/scrape_referencias.py`).
 
+### 4.2 Onde verificar cada critério
+
+| Critério | Onde está | Como verificar |
+|---|---|---|
+| Integração funcional com o LLM | `Code/modeling/resumidor.py`, `Code/api/routers/texto.py` | Subir o projeto (seção 5) e abrir http://127.0.0.1:8000/docs: testar `POST /processar_texto`. Ou, no painel (http://localhost:8501), aba **Resumo** em *Corpus e resumos* |
+| Descrição detalhada da integração (ambiente, bibliotecas, hardware) | Esta seção 4, `Code/api/README.md`, `Docs/Escolha_do_modelo.md` (seção 4) | Ler as três; as bibliotecas estão em `requirements.txt` |
+| Response Models | `Code/api/models.py` (`PedidoTexto`, `ResultadoResumo`) | Em /docs, ver os esquemas; enviar um texto com campo extra e conferir o 422 |
+| Tratamento de erros | `Code/api/erros.py`, `Code/api/routers/texto.py`, `Code/api/tests/` | `.venv\Scripts\python.exe -m unittest discover -s Code\api\tests -t .` (cobre 422, 502, 503, 504 e 500) |
+| Justificativa da escolha do modelo | `Docs/Escolha_do_modelo.md` (seções 2 e 3) | Ler a tabela de candidatos e a seção de justificativas; as medições estão em `Data/modeled/` |
+
 ## 5. Como rodar (Windows)
 
-Na pasta do projeto, nesta ordem (passos 1 a 3 obrigatórios; o 4 mostra o painel). Se o
-PowerShell bloquear a ativação do ambiente, chame o Python do `.venv` direto, como abaixo.
+Na pasta do projeto, nesta ordem (passos 1 a 3 obrigatórios; o 4 mostra o painel). Os
+comandos chamam o Python do `.venv` direto, então não é preciso ativar o ambiente.
 
 1. **Ambiente e dependências** (uma vez):
+   Use Python 3.12, 3.13 ou 3.14 (testado com 3.13). O Python 3.15 não serve: o pandas 3.0.5 não tem pacote pronto para ele.
    ```
    python -m venv .venv
    .venv\Scripts\python.exe -m pip install -r requirements.txt
@@ -187,7 +198,7 @@ Os passos acima continuam valendo para quem quiser controlar cada etapa.
 Teste com o modelo real (demora cerca de 1 minuto):
 
 ```
-$env:RODAR_MODELO_REAL = "1"
+set RODAR_MODELO_REAL=1
 .venv\Scripts\python.exe -m unittest Code.api.tests.test_modelo_real -v
 ```
 
