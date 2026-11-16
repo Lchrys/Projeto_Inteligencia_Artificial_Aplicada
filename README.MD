@@ -64,7 +64,7 @@ Architect (estrutura TDSP, ambiente, arquitetura).
 
 ## 3. Entregas do TP2 e TP3
 
-Painel Streamlit multipágina: `Scripts/app.py` (Início) e `Scripts/pages/`. Com a API no ar,
+Painel Streamlit multipágina: `Scripts/app.py` (Início) e `Scripts/pages/` (ver `Scripts/README.md` e `Scripts/pages/README.md`). Com a API no ar,
 as páginas a consomem e indicam a origem do dado ("API FastAPI" ou "leitura direta"); sem
 ela, o painel lê as fontes diretamente.
 
@@ -72,8 +72,8 @@ ela, o painel lê as fontes diretamente.
 |---|---|
 | Ambiente e deploy | `requirements.txt` com versões fixas; `.gitignore` (`.venv/`, `.env`, segredos); Git na `main`; deploy no Streamlit Community Cloud (entrada `Scripts/app.py`; ver `Code/deployment/README.md`) |
 | Interface | 6 páginas em 3 seções: Panorama setorial, Série histórica (seletor de anos), Comparação internacional (upload CSV), Contexto ODS 9 (meta, nuvem de palavras, aba Corpus e aba Resumo com o modelo local), Fontes e método |
-| API FastAPI | `Code/api/main.py`, routers e modelos Pydantic; GET de saúde, série, World Bank, metas ODS 9 e fatos/resumo; `POST /world-bank` (201). Cliente em `Scripts/cliente_api.py` |
-| Web scraping | `Code/data_acquisition/scrape_ods9.py` (Beautiful Soup, sem Selenium: nenhuma fonte é dinâmica) grava `Data/raw/ods9_metas.csv` e `ods9_corpus.txt` |
+| API FastAPI | `Code/api/main.py`, routers (ver `Code/api/routers/README.md`) e modelos Pydantic; GET de saúde, série, World Bank, metas ODS 9 e fatos/resumo; `POST /world-bank` (201). Cliente em `Scripts/cliente_api.py` |
+| Web scraping | `Code/data_acquisition/scrape_ods9.py` (Beautiful Soup, sem Selenium: nenhuma fonte é dinâmica) grava `Data/raw/ods9_metas.csv` e `ods9_corpus.txt` (ver `Code/data_acquisition/README.md`) |
 | Cache e sessão | `st.cache_data` (1 h nas consultas SIDRA/Ipeadata e nas respostas da API); CSV enviado em `st.session_state` |
 | Upload e download | `st.file_uploader` (CSV do DataBank → `POST /world-bank`); downloads de exemplo, recorte filtrado, tabelas SIDRA/Ipeadata (com fonte, código e data), TXT do Ipea e corpus |
 | Documentação | `Docs/Project_Charter.md`, `Docs/Data_Summary_Report.md`, READMEs por pasta |
@@ -83,14 +83,14 @@ ela, o painel lê as fontes diretamente.
 A rota **`POST /processar_texto`** resume um texto (50 a 2.000 caracteres) com o
 **`Qwen/Qwen3-0.6B`** (Apache 2.0, sem conta), executado na máquina do usuário, em float32 na
 CPU, sem internet após o download. Na página *Contexto ODS 9*, a aba **Resumo** usa essa rota
-para resumir a justificativa de uma meta.
+para resumir uma meta do ODS 9, um resumo de referência ou a introdução de Oreiro e Feijó (2010), em português.
 
-**Rubrica 1: integração com o LLM.** `Code/modeling/resumidor.py` carrega o modelo uma vez,
+**Integração com o LLM.** `Code/modeling/resumidor.py` carrega o modelo uma vez,
 na subida da API, e gera o resumo; `Code/api/routers/texto.py` expõe a rota. O painel a
-consome pelo `Scripts/cliente_api.py`. Medição (`Code/modeling/medir_modelo.py`), no banco
+consome pelo `Scripts/cliente_api.py`. Medição (`Code/modeling/medir_modelo.py`, ver `Code/modeling/README.md`), no banco
 de 10 textos: 12–38 s por resumo (mediana 26 s), ~2,4 GB de RAM.
 
-**Rubrica 2: integração local (passos, bibliotecas, hardware).**
+**Integração local (passos, bibliotecas, hardware).**
 - Bibliotecas: `transformers` (tokenizador e geração), `torch` (só CPU, via `--extra-index-url`
   no `requirements.txt`), `huggingface_hub` (download único), `fastapi` e `uvicorn`; `psutil` e
   `httpx` só em medição e testes.
@@ -103,13 +103,13 @@ de 10 textos: 12–38 s por resumo (mediana 26 s), ~2,4 GB de RAM.
   descartado.
 - Detalhes: `Code/api/README.md` e `Docs/Escolha_do_modelo.md` (seção 4).
 
-**Rubrica 3: Response Models.** Todas as rotas declaram `response_model` com modelos
+**Response Models.** Todas as rotas declaram `response_model` com modelos
 Pydantic em `Code/api/models.py`; os pedidos rejeitam campos extras. A rota de texto devolve o
 resumo em formato estruturado e documentado em `/docs`.
 
-**Rubrica 4: tratamento de erros.** Exceções HTTP específicas por cenário
+**Tratamento de erros.** Exceções HTTP específicas por cenário
 (`Code/api/erros.py`, `Code/api/routers/texto.py`), declaradas no `/docs` e cobertas por
-testes com modelo falso (`Code/api/tests/`):
+testes com modelo falso (`Code/api/tests/`, ver `Code/api/tests/README.md`):
 
 | Código | Cenário |
 |---|---|
@@ -119,11 +119,11 @@ testes com modelo falso (`Code/api/tests/`):
 | 504 | geração acima de 120 s |
 | 500 | erro inesperado: mensagem com código de rastreio; o traceback fica só no log |
 
-**Rubrica 5: escolha do modelo.** Critérios: desempenho (qualidade do resumo em português),
+**Escolha do modelo.** Critérios: desempenho (qualidade do resumo em português),
 custo computacional (cabe em 8 GB de RAM sem GPU, tempo por resumo aceitável) e
 acessibilidade (licença aberta, sem conta, ~1,5 GB). O Qwen2.5-1.5B foi descartado antes da medição, porque travou a máquina sem terminar o
 primeiro texto. Os outros dois foram medidos num banco de 10 textos (7 justificativas do
-ODS 9 e 3 resumos de referência; saídas em `Data/modeled/`): o Qwen2.5-0.5B-Instruct e o
+ODS 9 e 3 resumos de referência; saídas em `Data/modeled/`, ver `Data/modeled/README.md`): o Qwen2.5-0.5B-Instruct e o
 Qwen3-0.6B. O Qwen3-0.6B foi escolhido, porque errou menos nos textos do tema, e não por
 ser o mais rápido ou o mais leve. Justificativa completa, medições e erros encontrados em
 `Docs/Escolha_do_modelo.md`, que também registra o uso de IA.
@@ -132,6 +132,11 @@ ser o mais rápido ou o mais leve. Justificativa completa, medições e erros en
 textos em inglês podem gerar resumos que repetem o título. O **Streamlit Cloud não roda o
 modelo**: a aplicação publicada lê as fontes direto, sem a API; a rota de texto só existe com a
 API local.
+
+### 4.1 Observações do TP3 tratadas no TP4
+
+- **`cliente_api.py` com fallback e indicação da origem:** feito, com uma diferença. A função nova `analisar_texto` não tem fallback como as demais: sem a API, a aba Resumo mostra "indisponível" e não indica a origem do dado.
+- **Scraping do ODS 9 igual ao do TP2:** tratado. O projeto ganhou uma fonte e um script novos: o scraping das referências sobre desindustrialização (`Code/data_acquisition/scrape_referencias.py`).
 
 ## 5. Como rodar (Windows)
 
@@ -152,12 +157,22 @@ PowerShell bloquear a ativação do ambiente, chame o Python do `.venv` direto, 
    ```
    .venv\Scripts\python.exe -m uvicorn Code.api.main:app --reload
    ```
-4. **Subir o painel** (outro terminal):
+4. **Subir o painel** (outro terminal). O painel abre em http://localhost:8501:
    ```
    .venv\Scripts\python.exe -m streamlit run Scripts/app.py
    ```
 
-**Opcional — regerar os dados extraídos** (já estão em `Data/raw/`):
+**Forma rápida (opcional).** O comando abaixo faz os passos 1 a 4 de uma vez: cria o
+ambiente e instala as dependências se ainda não existirem, confere o modelo, sobe a API em
+outra janela e sobe o painel nesta, em http://localhost:8501. Para parar, feche as duas janelas.
+
+```
+python iniciar.py
+```
+
+Os passos acima continuam valendo para quem quiser controlar cada etapa.
+
+**Opcional — regerar os dados extraídos** (já estão em `Data/raw/`, ver `Data/raw/README.md`):
 ```
 .venv\Scripts\python.exe Code\data_acquisition\scrape_ods9.py
 .venv\Scripts\python.exe Code\data_acquisition\scrape_referencias.py

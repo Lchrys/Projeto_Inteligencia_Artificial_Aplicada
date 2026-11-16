@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
@@ -29,6 +31,25 @@ sobre_os_dados(
 )
 
 aba_meta, aba_corpus, aba_resumo = st.tabs(["Meta", "Corpus", "Resumo"])
+
+
+REF_CSV = Path(__file__).resolve().parents[2] / "Data" / "raw" / "referencias_resumos.csv"
+
+
+def _referencias() -> dict[str, str]:
+    """Resumos de todas as referências do CSV (alguns estão em inglês; o rótulo do idioma fica no CSV)."""
+    if not REF_CSV.exists():
+        return {}
+    refs = pd.read_csv(REF_CSV)
+    opcoes = {
+        f"Referência: {linha['titulo']} ({linha['ano']})": str(linha["resumo"])
+        for _, linha in refs.iterrows()
+    }
+    intro = REF_CSV.parent / "oreiro_feijo_2010_introducao.txt"
+    if intro.exists():
+        linhas = [l for l in intro.read_text(encoding="utf-8").splitlines() if l.strip() and not l.startswith("# ")]
+        opcoes["Introdução: Oreiro e Feijó (2010), em português"] = " ".join(linhas).strip()
+    return opcoes
 
 
 def _fallback_metas() -> dict:
@@ -173,8 +194,8 @@ with aba_resumo:
     st.markdown("#### Resumo com modelo de linguagem local")
     st.caption(
         "O resumo é gerado pelo modelo Qwen3-0.6B, rodando na API local, a partir "
-        "da justificativa de uma meta. Ele pode errar: confira com o texto de "
-        "origem antes de usar como fato."
+        "da justificativa de uma meta ou do resumo de uma referência. "
+        "Ele pode errar: confira com o texto de origem antes de usar como fato."
     )
     payload_resumo, _origem_resumo = obter("/ods9/metas", fallback=_fallback_metas)
     metas_resumo = quadro(payload_resumo)
@@ -184,19 +205,19 @@ with aba_resumo:
         com_texto = metas_resumo[
             metas_resumo["justificativa"].fillna("").astype(str).str.len() >= 50
         ]
-        opcoes_resumo = com_texto["meta"].astype(str).tolist()
-        if not opcoes_resumo:
-            st.warning("Nenhuma justificativa tem texto suficiente para resumir.")
+        textos = {
+            f"Meta {linha['meta']}": str(linha["justificativa"])
+            for _, linha in com_texto.iterrows()
+        }
+        textos.update(_referencias())
+        if not textos:
+            st.warning("Não há textos suficientes para resumir.")
         else:
-            meta_resumo = st.selectbox(
-                "Meta a resumir", opcoes_resumo, key="meta_resumo"
+            rotulo = st.selectbox(
+                "Texto a resumir", list(textos), key="texto_resumo"
             )
-            texto_meta = str(
-                com_texto[com_texto["meta"].astype(str) == meta_resumo][
-                    "justificativa"
-                ].iloc[0]
-            )
-            with st.expander("Texto de origem (justificativa da meta)"):
+            texto_meta = textos[rotulo]
+            with st.expander("Texto de origem"):
                 st.write(texto_meta)
             if st.button("Gerar resumo", key="btn_resumo"):
                 with st.spinner(

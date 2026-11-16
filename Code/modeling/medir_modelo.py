@@ -59,13 +59,22 @@ def montar_banco() -> pd.DataFrame:
     for _, linha in refs.iterrows():
         if linha["doi"] == DOI_OREIRO:
             # A introdução substitui o abstract em inglês. Fica só na memória: não é gravada no projeto.
-            texto = introducao_scielo(linha["url"])
+            texto = ler_introducao_salva()
             origem = f"{linha['periodico']} ({linha['ano']}), introdução"
         else:
             texto = linha["resumo"]
             origem = f"{linha['periodico']} ({linha['ano']})"
         linhas.append({"id": f"ref-{linha['doi']}", "origem": origem, "texto": texto})
     return pd.DataFrame(linhas)
+
+
+INTRODUCAO_SALVA = RAIZ / "Data" / "raw" / "oreiro_feijo_2010_introducao.txt"
+
+
+def ler_introducao_salva() -> str:
+    """Lê a introdução de Data/raw (sem os cabeçalhos com '# ', que trazem citação e licença)."""
+    linhas = INTRODUCAO_SALVA.read_text(encoding="utf-8").splitlines()
+    return " ".join(l for l in linhas if l.strip() and not l.startswith("# ")).strip()
 
 
 def introducao_scielo(url: str) -> str:
