@@ -63,22 +63,20 @@ Architect (estrutura TDSP, ambiente, arquitetura).
 
 ## 3. Entregas do TP2, TP3 e TP4
 
-Painel Streamlit multipágina (`Scripts/app.py` e `Scripts/pages/`; ver `Scripts/README.md` e `Scripts/pages/README.md`)
-e API FastAPI (`Code/api/`). Com a API no ar, o Início, a Série histórica, a Comparação internacional e o Corpus e resumos
-a consomem e indicam a origem do dado ("API FastAPI" ou "leitura direta"); sem ela, leem as fontes diretamente. O Panorama
-setorial lê a SIDRA direto, sem a API.
+Painel Streamlit multipágina (`Scripts/app.py` e `Scripts/pages/`; ver `Scripts/README.md` e `Scripts/pages/README.md`) e
+API FastAPI (`Code/api/`; ver `Code/api/README.md`), executados localmente (`Code/deployment/README.md`). Com a API no ar,
+o Início, a Série histórica, a Comparação internacional e o Corpus e resumos a consomem e indicam a origem do dado ("API
+FastAPI" ou "leitura direta"); sem ela, leem as fontes diretamente. O Panorama setorial lê a SIDRA direto.
 
 ### 3.1 Painel e API (TP2 e TP3)
 
 | Item | Onde / como |
 |---|---|
-| Ambiente e deploy | `requirements.txt` com versões fixas; `.gitignore` (`.venv/`, `.env`, segredos); Git; execução local do painel e da API, com `iniciar.py` (ver `Code/deployment/README.md`) |
+| Ambiente | `requirements.txt` com versões fixas; `.gitignore` (`.venv/`, `.env`, segredos); Git; `iniciar.py` sobe tudo de uma vez |
 | Interface | 6 páginas em 3 seções do menu. **Painel:** Início, *SIDRA (Panorama Setorial)*, *IPEA (Série Histórica)* (seletor de anos) e *Comparação Internacional* (upload CSV). **Contexto:** Corpus e resumos (meta, nuvem de palavras, aba Corpus e aba Resumo com o modelo local). **Método:** Fontes e método. Nos textos, as três páginas de dados aparecem pelo nome curto (Panorama setorial, Série histórica, Comparação internacional) |
 | API FastAPI | `Code/api/main.py`, routers (ver `Code/api/routers/README.md`) e modelos Pydantic; GET de saúde, série, World Bank, metas ODS 9 e fatos/resumo; `POST /world-bank` (201). Cliente em `Scripts/cliente_api.py` |
 | Web scraping | `Code/data_acquisition/scrape_ods9.py` (Beautiful Soup, sem Selenium: nenhuma fonte é dinâmica) grava `Data/raw/ods9_metas.csv` e `ods9_corpus.txt`; no TP4, `scrape_referencias.py` grava os resumos das referências (ver `Code/data_acquisition/README.md`) |
-| Cache e sessão | `st.cache_data` (1 h nas consultas SIDRA/Ipeadata e nas respostas da API); CSV enviado em `st.session_state` |
-| Upload e download | `st.file_uploader` (CSV do DataBank → `POST /world-bank`); downloads de exemplo, recorte filtrado, tabelas SIDRA/Ipeadata (com fonte, código e data), TXT do Ipea e corpus |
-| Documentação | `Docs/Project_Charter.md`, `Docs/Data_Summary_Report.md`, READMEs por pasta |
+| Cache, upload e download | `st.cache_data` (1 h nas consultas SIDRA/Ipeadata e nas respostas da API); CSV enviado em `st.session_state` e `st.file_uploader` (CSV do DataBank → `POST /world-bank`); downloads de exemplo, recorte filtrado, tabelas SIDRA/Ipeadata (com fonte, código e data), TXT do Ipea e corpus |
 
 ### 3.2 LLM local (TP4)
 
@@ -87,34 +85,25 @@ A rota **`POST /processar_texto`** resume um texto (50 a 2.000 caracteres) com o
 em float32 na CPU, sem internet após o download. Na página *Corpus e resumos*, a aba **Resumo** usa essa rota para
 resumir uma meta do ODS 9, um resumo de referência ou a introdução de Oreiro e Feijó (2010), em português.
 
-- **Integração.** `Code/modeling/resumidor.py` carrega o modelo uma vez, na subida da API; `Code/api/routers/texto.py`
-  expõe a rota; o painel a consome por `Scripts/cliente_api.py`. Medição (`Code/modeling/medir_modelo.py`, ver
-  `Code/modeling/README.md`), no banco de 10 textos: 12–38 s por resumo (mediana 26 s), ~2,4 GB de RAM.
-- **Ambiente e hardware** (passos na seção 5, passos 2, 7 e 5: instalar, baixar o modelo e subir o painel, que sobe a API; detalhes em `Code/api/README.md` e
-  `Docs/Escolha_do_modelo.md`, seção 4). Bibliotecas: `transformers`, `torch` (só CPU, via `--extra-index-url` no
-  `requirements.txt`), `huggingface_hub`, `fastapi` e `uvicorn`; `psutil` e `httpx` só em medição e testes. No Intel
-  Core i5-1035G1, com 8 GB de RAM e sem GPU: float32 na CPU (~2,4 GB), modo de raciocínio do Qwen3 desligado
-  (`enable_thinking=False`, pois o resumo só precisa da resposta) e, com o modelo em disco, funcionamento offline
-  (`HF_HUB_OFFLINE=1`). O aviso de links simbólicos do cache Hugging Face no Windows é inofensivo.
-- **Response Models.** Todas as rotas declaram `response_model` com modelos Pydantic em `Code/api/models.py`; os pedidos
-  rejeitam campos extras. A rota de texto devolve o resumo em formato estruturado e documentado em `/docs`.
-- **Tratamento de erros** (`Code/api/erros.py`, `Code/api/routers/texto.py`; declarados no `/docs` e cobertos por testes
-  com modelo falso em `Code/api/tests/`):
-
-  | Código | Cenário |
-  |---|---|
-  | 422 | texto com menos de 50 ou mais de 2.000 caracteres, campo extra ou tipo de análise inválido |
-  | 502 | o modelo devolveu resumo vazio |
-  | 503 | o modelo não carregou na subida (as demais rotas seguem no ar) |
-  | 504 | geração acima de 120 s |
-  | 500 | erro inesperado: mensagem com código de rastreio; o traceback fica só no log |
-
-- **Escolha do modelo.** Critérios: desempenho (qualidade do resumo em português), custo computacional (cabe em 8 GB de
-  RAM sem GPU) e acessibilidade (licença aberta, sem conta, ~1,5 GB). O Qwen2.5-1.5B-Instruct (~6,2 GB só de pesos) foi
-  descartado antes da medição (travou a máquina). O Qwen2.5-0.5B-Instruct e o Qwen3-0.6B foram medidos num banco de 10
-  textos (7 justificativas do ODS 9 e 3 resumos de referência; saídas em `Data/modeled/`): o Qwen3-0.6B foi escolhido
-  porque errou menos nos textos do tema, e não por ser o mais rápido ou o mais leve. Justificativa, medições e erros: `Docs/Escolha_do_modelo.md`, que
-  também registra o uso de IA.
+- **Integração e medição.** `Code/modeling/resumidor.py` carrega o modelo uma vez, na subida da API;
+  `Code/api/routers/texto.py` expõe a rota; o painel a consome por `Scripts/cliente_api.py`. No banco de 10 textos
+  (`Code/modeling/medir_modelo.py`, ver `Code/modeling/README.md`): 12–38 s por resumo (mediana 26 s), ~2,4 GB de RAM.
+- **Ambiente.** Bibliotecas: `transformers`, `torch` (só CPU, via `--extra-index-url` no `requirements.txt`),
+  `huggingface_hub`, `fastapi` e `uvicorn`; `psutil` e `httpx` só em medição e testes. No Intel Core i5-1035G1, com 8 GB de
+  RAM e sem GPU: float32 na CPU, modo de raciocínio do Qwen3 desligado (`enable_thinking=False`) e, com o modelo em
+  disco, funcionamento offline (`HF_HUB_OFFLINE=1`). Passos na seção 5 (passos 2, 7 e 5); detalhes em
+  `Code/api/README.md` e `Docs/Escolha_do_modelo.md` (seção 4).
+- **Response Models e erros.** Todas as rotas declaram `response_model` (`Code/api/models.py`) e os pedidos rejeitam
+  campos extras. Os erros (`Code/api/erros.py`, `Code/api/routers/texto.py`) aparecem no `/docs` e têm testes com modelo
+  falso (`Code/api/tests/`): **422** (texto fora de 50 a 2.000 caracteres, campo extra ou tipo de análise inválido),
+  **502** (resumo vazio), **503** (o modelo não carregou na subida; as demais rotas seguem no ar), **504** (geração acima
+  de 120 s) e **500** (erro inesperado, com código de rastreio; o traceback fica só no log).
+- **Escolha do modelo.** Desempenho (qualidade do resumo em português), custo computacional (cabe em 8 GB de RAM sem GPU)
+  e acessibilidade (licença aberta, sem conta, ~1,5 GB). O Qwen2.5-1.5B-Instruct (~6,2 GB só de pesos) foi descartado
+  antes da medição (travou a máquina). O Qwen2.5-0.5B-Instruct e o Qwen3-0.6B foram medidos num banco de 10 textos (7
+  justificativas do ODS 9 e 3 resumos de referência; saídas em `Data/modeled/`): o Qwen3-0.6B foi escolhido porque errou
+  menos nos textos do tema, e não por ser o mais rápido ou o mais leve. Justificativa, medições e erros:
+  `Docs/Escolha_do_modelo.md`.
 - **Limites.** O resumo é gerado por modelo e exige revisão humana antes de ser usado como fato; textos em inglês podem
   gerar resumos que repetem o título. A rota de texto só existe com a API no ar; sem ela, a aba Resumo mostra
   "indisponível".
@@ -122,16 +111,6 @@ resumir uma meta do ODS 9, um resumo de referência ou a introdução de Oreiro 
   (a função nova `analisar_texto` não tem fallback: sem a API, a aba Resumo mostra "indisponível" e não indica a origem).
   Scraping do ODS 9 igual ao do TP2: tratado, e o projeto ganhou uma fonte e um script novos, o scraping das referências
   sobre desindustrialização (`Code/data_acquisition/scrape_referencias.py`).
-
-### 3.3 Onde verificar cada critério do TP4
-
-| Critério | Onde está | Como verificar |
-|---|---|---|
-| Integração funcional com o LLM | `Code/modeling/resumidor.py`, `Code/api/routers/texto.py` | Subir o painel (seção 5, passos 2, 5 e 7; ele sobe a API junto) e abrir http://127.0.0.1:8000/docs: testar `POST /processar_texto`. Ou, no painel (http://localhost:8501), aba **Resumo** em *Corpus e resumos* |
-| Descrição detalhada da integração (ambiente, bibliotecas, hardware) | Seção 3.2, `Code/api/README.md`, `Docs/Escolha_do_modelo.md` (seção 4) | Ler as três; as bibliotecas estão em `requirements.txt` |
-| Response Models | `Code/api/models.py` (`PedidoTexto`, `ResultadoResumo`) | Em /docs, ver os esquemas; enviar um texto com campo extra e conferir o 422 |
-| Tratamento de erros | `Code/api/erros.py`, `Code/api/routers/texto.py`, `Code/api/tests/` | `.venv\Scripts\python.exe -m unittest discover -s Code\api\tests -t .` (cobre 422, 502, 503, 504 e 500) |
-| Justificativa da escolha do modelo | `Docs/Escolha_do_modelo.md` (seções 2 e 3) | Ler a tabela de candidatos e a seção de justificativas; as medições estão em `Data/modeled/` |
 
 ## 4. TP5: chat com IA em cada página
 
@@ -161,28 +140,30 @@ o painel sobe a API sozinho ao abrir, e, se ela não subir, a página mostra o a
 não guarda conversa: o
 histórico fica no painel (`st.session_state`) e vai a cada pedido.
 
-**Fluxo completo, do dado ao insight** (ao lado de cada etapa, o arquivo onde ela acontece):
+**Fluxo completo, do dado ao insight** (em cada etapa, o arquivo onde ela acontece):
 
-```
-1. COLETA             Ipeadata (API) · IBGE SIDRA (API) · World Bank (CSV enviado) · Ipea ODS 9 e referências (scraping)
-                                                  │
-2. PROCESSAMENTO      Scripts/nucleo.py: limpeza, formato longo, zeros do DataBank como ausência,
-   E ANÁLISE          participações setoriais e comparações, aviso da quebra de 1995
-                                                  │
-3. ACESSO             API FastAPI (Code/api) ──► Scripts/cliente_api.py
-                      (sem a API: as páginas leem direto de nucleo.py; o chat e o resumo exigem a API)
-                                                  │
-4. APRESENTAÇÃO       Scripts/app.py e Scripts/pages/ (6 páginas): gráficos, tabelas e filtros
-                                                  │
-5. IA (CHAT)          Scripts/contextos.py: as tabelas da página, com os filtros, viram o contexto
-                      Scripts/chat_pagina.py ──► POST /chat (Code/api/routers/chat.py)
-                      Code/modeling/assistente.py: prompt, memória de 6 trocas, OpenAI (gpt-4.1-mini),
-                      conferência dos números por código
-                                                  │
-                                                  ▼
-                      Resposta na página: "Conta conferida", "Fonte das tabelas" e os dados enviados à vista
+```mermaid
+flowchart TD
+    F["<b>1. Coleta</b><br/>Ipeadata (API) · IBGE SIDRA (API)<br/>World Bank (CSV enviado) · Ipea ODS 9 e referências (scraping)"]
+    N["<b>2. Processamento e análise</b><br/><code>Scripts/nucleo.py</code><br/>limpeza, formato longo, participações, quebra de 1995"]
+    A["<b>3. Acesso</b><br/>API FastAPI (<code>Code/api</code>) e <code>Scripts/cliente_api.py</code>"]
+    P["<b>4. Apresentação</b><br/><code>Scripts/app.py</code> e <code>Scripts/pages/</code> (6 páginas)<br/>gráficos, tabelas e filtros"]
+    C["<b>5. IA: chat com memória</b><br/><code>Scripts/contextos.py</code> e <code>Scripts/chat_pagina.py</code><br/>as tabelas da página, com os filtros, viram o contexto"]
+    L["<code>POST /chat</code> (<code>Code/api/routers/chat.py</code>)<br/><code>Code/modeling/assistente.py</code><br/>prompt, memória de 6 trocas, OpenAI, conferência dos números"]
+    R["<b>Resposta na página</b><br/>conta conferida, fonte das tabelas e dados enviados à vista"]
+    Q["<b>Resumo local (TP4)</b><br/>aba Resumo, <code>POST /processar_texto</code>, Qwen3-0.6B"]
 
-RESUMO LOCAL (TP4)    aba Resumo ──► POST /processar_texto ──► Qwen3-0.6B (carregado na subida da API)
+    F --> N --> A --> P
+    N -. "sem a API: leitura direta" .-> P
+    P --> C --> L --> R
+    P --> Q
+
+    classDef dado fill:#eef2f7,stroke:#5b7083,color:#1b2733
+    classDef ia fill:#e7f4ec,stroke:#3f8f5f,color:#12301f
+    classDef lado fill:#f6f1e7,stroke:#a08440,color:#33290f
+    class F,N,A,P dado
+    class C,L,R ia
+    class Q lado
 ```
 
 ### 4.2 Como a solução resolve o problema de negócio (ESG e ODS)
