@@ -24,6 +24,8 @@ from interface import (
     metrica_completude,
     sobre_os_dados,
 )
+from chat_pagina import chat_da_pagina
+from contextos import contexto_comparacao
 from nucleo import ler_databank
 
 PAISES_PADRAO = ("BRA", "DEU", "CHN", "USA")
@@ -35,7 +37,7 @@ CHAVES_FILTRO = (
     "filtro_wb_pais_composicao",
 )
 
-configurar_pagina("Comparação internacional", layout="wide")
+configurar_pagina("Comparação Internacional", layout="wide")
 
 if "wb_usuario" not in st.session_state:
     st.session_state.wb_usuario = pd.DataFrame()
@@ -65,7 +67,7 @@ def _titulo_eixo(modo: str) -> str:
     return "% do PIB"
 
 
-st.title("Comparação internacional")
+st.title("Comparação Internacional")
 st.caption(
     "Como a participação da indústria de transformação no PIB do Brasil "
     "se compara à de outras economias."
@@ -403,3 +405,22 @@ if not world_bank_base.empty:
         st.session_state.wb_envio_id = None
         _limpar_filtros()
         st.rerun()
+
+if not world_bank.empty:  # o assistente vê o que a tela mostra: os filtros aplicados
+    selecao = ""
+    if escolhidos and indicadores:
+        anos_na_tela = st.session_state.get("filtro_wb_anos")
+        selecao = (
+            "países: " + ", ".join(nomes_pais.get(c, c) for c in escolhidos)
+            + "; indicadores: " + ", ".join(indicadores)
+            + (f"; anos de {anos_na_tela[0]} a {anos_na_tela[1]}" if anos_na_tela else "")
+        )
+    chat_da_pagina(
+        "comparacao",
+        contexto_comparacao(world_bank, selecao),
+        sugestoes=(
+            "Como o Brasil se compara aos outros países?",
+            "Qual país tem a maior participação da indústria de transformação?",
+            "Qual foi o valor do Brasil em 2010?",
+        ),
+    )

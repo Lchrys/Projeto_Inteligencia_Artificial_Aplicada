@@ -1,9 +1,13 @@
 # Modeling (TDSP)
 
-Este README foi redigido com apoio de IA (Claude Opus 5.5 e Claude Haiku 5.5) e revisado pelo autor.
+Este README foi redigido com apoio de IA (Claude Opus 5.5, Claude Haiku 5.5 e Claude Sonnet 5.5) e revisado pelo autor.
 
 Indicadores derivados (participação setorial, comparação internacional).
 Não há modelo preditivo (fora do escopo do charter).
+
+Assistente de chat (TP5):
+- `testar_assistente.py`: roda 24 casos reais contra a OpenAI, três conversas (uma por página), e grava `Data/modeled/chat_openai_casos.csv`. Comando: `.venv\Scripts\python.exe Code\modeling\testar_assistente.py`.
+- `assistente.py`: o assistente de chat, genérico: prompt de sistema, montagem do contexto (`tabela_para_contexto`, `resumo_temporal`), memória limitada, chamada à OpenAI e checagem dos números da resposta (`conferir_numeros`: números fora do contexto e contas conferidas). Cada página entrega o contexto (`Scripts/contextos.py`). A chave vem de `OPENAI_API_KEY` (ambiente ou `.env`).
 
 Modelo de linguagem local (TP4), para resumos de texto:
 - `baixar_modelo.py`: baixa [`Qwen/Qwen3-0.6B`](https://huggingface.co/Qwen/Qwen3-0.6B) uma vez, com internet.

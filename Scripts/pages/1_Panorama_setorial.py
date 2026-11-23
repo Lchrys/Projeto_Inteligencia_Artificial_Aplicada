@@ -1,6 +1,8 @@
 import pandas as pd
 import streamlit as st
 
+from chat_pagina import chat_da_pagina
+from contextos import contexto_panorama
 from dados import (
     URL_SIDRA_SUBSETORES,
     URL_SIDRA_TRIMESTRAL,
@@ -18,9 +20,9 @@ from nucleo import (
     tabela_sidra_legivel,
 )
 
-configurar_pagina("Panorama setorial")
+configurar_pagina("SIDRA (Panorama Setorial)")
 
-st.title("Panorama setorial")
+st.title("SIDRA (Panorama Setorial)")
 st.caption(
     "Como se divide o PIB brasileiro nos últimos quatro trimestres, "
     "e quanto da indústria é transformação."
@@ -195,3 +197,14 @@ with aba_sub:
             codigo_serie="1846",
             data_extracao=data_hoje,
         )
+
+if not sidra_trimestral.empty and not sidra_subsetores.empty:
+    chat_da_pagina(
+        "panorama",
+        contexto_panorama(sidra_trimestral, sidra_subsetores),
+        sugestoes=(
+            "Qual o peso dos serviços e da indústria no PIB?",
+            "Quanto da indústria é transformação?",
+            "A transformação pesa mais que a agropecuária?",
+        ),
+    )

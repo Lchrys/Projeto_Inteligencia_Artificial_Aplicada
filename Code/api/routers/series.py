@@ -43,11 +43,6 @@ def serie_com_cache():
     return serie
 
 
-def limpar_cache_serie() -> None:
-    _cache_serie["quando"] = 0.0
-    _cache_serie["serie"] = None
-
-
 @router.get(
     "/serie/transformacao",
     response_model=SerieOut,

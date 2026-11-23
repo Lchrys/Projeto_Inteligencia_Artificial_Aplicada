@@ -12,11 +12,52 @@ O TP4 não acrescenta fonte oficial numérica. O corpus textual do modelo de lin
 
 - **Metas do ODS 9** (Fonte 5, `Data/raw/ods9_metas.csv`): as justificativas de cada meta são o principal insumo de resumo. Usadas sete das oito metas, porque a 9.a tem justificativa de 34 caracteres.
 - **Resumos das referências** (seção "Estudos publicados"): Morceiro (2021), em português, e Rodrik (2016), em inglês, pela FGV e pelo Springer, coletados por `Code/data_acquisition/scrape_referencias.py`.
-- **Introdução do Oreiro e Feijó (2010)**: lida ao vivo da página do SciELO, em português, e usada como entrada do modelo. O texto não é gravado no projeto; o CSV guarda só o resumo gerado.
+- **Introdução do Oreiro e Feijó (2010)**: seção INTRODUÇÃO do artigo no SciELO, em português, salva em `Data/raw/oreiro_feijo_2010_introducao.txt` (com citação e licença CC BY-NC 4.0 no cabeçalho) e usada como entrada do modelo. O CSV de medição guarda só o resumo gerado.
 
-O modelo lê esses textos, e não as séries numéricas. As séries (Fontes 1 a 4) continuam sendo a base de todos os números do painel. O modelo não recebe nem calcula valores de série; quando o relatório a partir de `/fatos/resumo` for implementado, o modelo só redigirá a partir do JSON que o código calcula.
+O modelo lê esses textos, e não as séries numéricas. As séries (Fontes 1 a 4) continuam sendo a base de todos os números do painel. O modelo não recebe nem calcula valores de série; no TP5, o assistente conversacional recebe as tabelas que cada página mostra, em texto, e só redige a partir delas (ver "Revisão no TP5").
 
 Licenças por periódico: ver "Estudos publicados". O uso dos resumos é de citação, e o do SciELO é restrito a fins não comerciais (CC BY-NC 4.0).
+
+# Revisão no TP5
+
+O TP5 também não acrescenta fonte oficial. Ele fecha o ciclo de dados: o que as Fontes 1 a 4 coletam passa a ser consumido por um chat com memória no fim de cada página de dados, que usa a API da OpenAI (o Qwen3-0.6B local do TP4 segue na aba Resumo, só para resumir textos).
+
+## Como cada fonte chega ao chat
+
+| Etapa | O que acontece | Onde |
+|---|---|---|
+| Coleta | SIDRA e Ipeadata por API; World Bank por arquivo do DataBank | Fontes 1 a 4; `Scripts/nucleo.py` |
+| Processamento | Limpeza, conversão para formato longo, zeros do DataBank tratados como ausência, aviso de quebra em 1995 | `Scripts/nucleo.py` |
+| Análise | A página calcula e mostra as participações setoriais, os recortes e os filtros | `Scripts/nucleo.py`, `Scripts/pages/` |
+| IA | As tabelas da página viram texto (`Scripts/contextos.py`) e vão ao modelo, que responde com o histórico da conversa | `Code/modeling/assistente.py` |
+| Apresentação | Gráficos e tabelas da página, com o chat logo abaixo e o texto enviado ao modelo à vista | `Scripts/chat_pagina.py` |
+
+## O que cada chat recebe
+
+| Página | Tabelas no contexto | Fonte |
+|---|---|---|
+| Série histórica | Participação da transformação no PIB, ano a ano, no intervalo do seletor | Ipeadata, SCN10_VAITY10 (Fonte 3) |
+| Panorama setorial | Composição do PIB por setor, subsetores da indústria (acumulado de quatro trimestres) e valores trimestrais | SIDRA, tabela 1846 (Fontes 1 e 2) |
+| Comparação internacional | Uma tabela por indicador do CSV enviado, um país por coluna, com os filtros da tela | World Bank, CSV enviado (Fonte 4) |
+
+Cada tabela leva a fonte e uma nota (preços correntes, acumulado de quatro trimestres, quebra de 1995). As séries temporais vão do ano mais recente ao mais antigo e trazem um resumo calculado pelo código (primeiro, último, mínimo e máximo de cada coluna, com o ano, antes e depois de 1995). O Brasil tem níveis diferentes no Ipeadata e no World Bank (ver a divergência na Fonte 4), e as duas fontes ficam em páginas separadas, sem se misturar.
+
+## O que o chat faz e o que não faz
+
+- **Só dados da aplicação:** o chat vê o que a página mostra, com os filtros aplicados. O CSV de exemplo de `Data/raw/` só entra se o usuário o enviar na Comparação internacional. Sem envio, a página não tem dados nem chat.
+- **Contas conferidas pelo código:** o modelo redige a partir das tabelas e pode calcular uma diferença, soma ou variação percentual se mostrar os valores usados. Os números são conferidos por código: o que não estiver nas tabelas, na pergunta ou nas falas do usuário, e não for o resultado exato de uma conta com valores da própria resposta, aparece como aviso.
+- **Memória:** o histórico fica na sessão do usuário (`st.session_state`), separado por página, e só as últimas trocas são reenviadas ao modelo, para limitar custo e tamanho do contexto. Nada do histórico é gravado em disco.
+
+## Dados enviados ao provedor
+
+Ao usar a API da OpenAI, saem da máquina apenas dados públicos: as tabelas da página (fontes oficiais) e a pergunta do usuário. Não há dado pessoal nem microdado. A chave da API fica no `.env` da máquina da API (ignorado pelo Git), nunca no repositório.
+
+## Qualidade e limites
+
+- O chat herda as ressalvas de método desta página: preços correntes, quebra de 1995, Ipeadata e World Bank que não são evidência independente do IBGE.
+- A resposta é gerada por modelo e exige revisão humana antes de ser usada como fato. Em testes, o modelo errou buscas de anos antigos em tabelas longas; por isso o contexto se restringe ao que a tela mostra.
+- Sem chave da OpenAI, ou sem internet, o chat fica indisponível; as páginas seguem funcionando.
+- O chat passa pela rota `POST /chat` da API FastAPI; o painel sobe a API sozinho ao abrir, e, se ela não subir, o chat mostra o comando para subi-la à mão (as demais páginas seguem funcionando).
 
 # Hierarquia das fontes
 
@@ -64,7 +105,7 @@ Fonte: Ipeadata (Ipea), série SCN10_VAITY10 (PIB - indústria - transformação
 Tipo de dado: série temporal anual, estruturada e quantitativa. Pela documentação da API
 (https://www.ipea.gov.br/portal/categorias/2-uncategorised/1825-api), série numérica tem "VALVALOR" float, "VALDATA" datetime e "SERCODIGO" varchar. A extração no painel usa ipeadatapy (OData4 ValoresSerie), na série completa disponível.
 
-Objetivo de uso: é a série principal do painel para o indicador 9.2.1 da ONU (participação da indústria de transformação no PIB) no maior período disponível. Não é validação independente do IBGE: o Ipeadata compila o próprio SCN, em frequência anual. A checagem cruzada cabe ao World Bank (Fonte 4, outra classificação e outra defasagem) e à literatura (seção Fontes previstas).
+Objetivo de uso: é a série principal do painel para o indicador 9.2.1 da ONU (participação da indústria de transformação no PIB) no maior período disponível. Não é validação independente do IBGE: o Ipeadata compila o próprio SCN, em frequência anual. A checagem cruzada cabe ao World Bank (Fonte 4, outra classificação e outra defasagem) e à literatura (seção Fontes fora do escopo).
 
 O slider do painel abre em 1995, o primeiro ano em que os níveis das Contas Nacionais são comparáveis. A série completa permanece disponível; o aviso de quebra metodológica aparece quando o período atravessa 1995. A completude do recorte, na Série histórica, é o número de anos distintos com valor dividido pelo número de anos do intervalo do slider (`fim − início + 1`), não a fração de células vazias depois de `dropna`.
 
@@ -104,25 +145,25 @@ O Selenium não foi usado no TP3 porque nenhuma fonte do projeto depende de inte
 - O World Bank entra por arquivo exportado do DataBank, guardado em `Data/raw/`.
 - A página ODS 9 do Ipea é HTML estático. O texto recolhido de cada meta (justificativa e conceitos, no bloco `div.mais_conteudo`) já vem no HTML original; o botão "ver mais" apenas o exibe. Uma única requisição com `requests` e a leitura com Beautiful Soup extraem as 8 metas completas (`Code/data_acquisition/scrape_ods9.py`).
 
-Usar um navegador automatizado acrescentaria dependência de navegador e driver, mais tempo de execução e mais fragilidade a mudanças de layout, sem ganho de dado. Também não seria executável no Streamlit Community Cloud. Seguindo a orientação de manter a solução simples, a coleta permanece com API, arquivo e Beautiful Soup. O Selenium volta a ser considerado se uma fonte nova exigir formulário, rolagem ou carregamento assíncrono.
+Usar um navegador automatizado acrescentaria dependência de navegador e driver, mais tempo de execução e mais fragilidade a mudanças de layout, sem ganho de dado. Seguindo a orientação de manter a solução simples, a coleta permanece com API, arquivo e Beautiful Soup. O Selenium volta a ser considerado se uma fonte nova exigir formulário, rolagem ou carregamento assíncrono.
 
 # Dados recebidos pela API (POST)
 
 Não é fonte oficial nova. O `POST /world-bank` valida o CSV do DataBank (colunas `Country Name`, `Country Code`, `Series Name`, `Series Code` e anos no padrão `1990 [YR1990]`), descarta o rodapé, converte para formato longo, gera um identificador e grava `Data/processed/world_bank_envios/{id}.csv`. A página Comparação internacional consulta esse envio em `GET /world-bank/{id}`. Sem a API, o painel processa o arquivo localmente.
 
-A API roda só em ambiente local (`uvicorn`). No Streamlit Community Cloud ela não sobe; Início, Série histórica, Comparação internacional e Corpus e resumos caem na leitura direta.
+A API roda em ambiente local (`uvicorn`). Se ela não estiver no ar, Início, Série histórica, Comparação internacional e Corpus e resumos caem na leitura direta; o chat e a aba Resumo exigem a API.
 
-# Fontes previstas
+# Fontes fora do escopo
 
-Não entram na extração automatizada desta etapa. O Banco Central/SGS permanece mapeado para trabalho posterior; a literatura já é usada na validação cruzada, por leitura, e não por API. A página ODS 8 do Ipea (mesmo layout da Fonte 5) fica como coleta possível se o painel passar a documentar o pilar Social e o indicador 9.2.2.
+Não entram na extração automatizada do projeto. O Banco Central/SGS fica fora do escopo, descrito aqui só para registro; a literatura já é usada na validação cruzada, por leitura, e não por API. A página ODS 8 do Ipea (mesmo layout da Fonte 5) também fica fora, porque o painel não documenta o pilar Social nem o indicador 9.2.2.
 
 ## Banco Central do Brasil, SGS
 
-Fonte: Banco Central do Brasil, Sistema Gerenciador de Séries Temporais (SGS), endpoint api.bcb.gov.br/dados/serie. Serão utilizados indicadores de produção industrial e de atividade econômica setorial.
+Fonte: Banco Central do Brasil, Sistema Gerenciador de Séries Temporais (SGS), endpoint api.bcb.gov.br/dados/serie. Os indicadores de interesse seriam de produção industrial e de atividade econômica setorial.
 
 Tipo de dado: série temporal mensal, estruturada e quantitativa. No portal de Dados Abertos do BCB (https://dadosabertos.bcb.gov.br/), o JSON do SGS traz os campos "data" e "valor" como texto.
 
-Objetivo de uso: acrescentar ao dashboard uma leitura de curto prazo da indústria, junto à série de contas nacionais. A produção industrial mede ciclo, não estrutura: pode crescer enquanto a participação da transformação no PIB cai.
+Objetivo de uso, se fosse incluída: acrescentar ao dashboard uma leitura de curto prazo da indústria, junto à série de contas nacionais. A produção industrial mede ciclo, não estrutura: pode crescer enquanto a participação da transformação no PIB cai.
 
 ## Estudos publicados
 

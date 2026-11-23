@@ -19,8 +19,6 @@ from pathlib import Path
 
 import pandas as pd
 import psutil
-import requests
-from bs4 import BeautifulSoup
 
 from resumidor import carregar, resumir
 
@@ -31,7 +29,6 @@ MODELO = os.environ.get("MODELO_RESUMO", "Qwen/Qwen3-0.6B")
 # Um arquivo por modelo, para uma medição não sobrescrever a outra.
 # Ex.: Qwen/Qwen3-0.6B -> Data/modeled/resumos_qwen3_0_6b.csv
 SAIDA = RAIZ / "Data" / "modeled" / f"resumos_{MODELO.split('/')[-1].lower().replace('.', '_').replace('-', '_')}.csv"
-HEADERS_HTTP = {"User-Agent": "monitor-desindustrializacao/0.4 (projeto academico)"}
 DOI_OREIRO = "10.1590/S0101-31572010000200003"
 MIN_CARACTERES = 150
 PADRAO_NUMERO = re.compile(r"\d+(?:[.,]\d+)?")
@@ -58,7 +55,7 @@ def montar_banco() -> pd.DataFrame:
     refs = pd.read_csv(REF_CSV)
     for _, linha in refs.iterrows():
         if linha["doi"] == DOI_OREIRO:
-            # A introdução substitui o abstract em inglês. Fica só na memória: não é gravada no projeto.
+            # A introdução (salva em Data/raw/) substitui o abstract em inglês.
             texto = ler_introducao_salva()
             origem = f"{linha['periodico']} ({linha['ano']}), introdução"
         else:
@@ -75,33 +72,6 @@ def ler_introducao_salva() -> str:
     """Lê a introdução de Data/raw (sem os cabeçalhos com '# ', que trazem citação e licença)."""
     linhas = INTRODUCAO_SALVA.read_text(encoding="utf-8").splitlines()
     return " ".join(l for l in linhas if l.strip() and not l.startswith("# ")).strip()
-
-
-def introducao_scielo(url: str) -> str:
-    """Lê os parágrafos entre 'INTRODUÇÃO' e o próximo título em maiúsculas, na página do SciELO."""
-    resposta = requests.get(url, headers=HEADERS_HTTP, timeout=60)
-    resposta.raise_for_status()
-    sopa = BeautifulSoup(resposta.text, "html.parser")
-    corpo = sopa.find("div", attrs={"data-anchor": "Text"})
-    if corpo is None:
-        raise SystemExit(f"Texto integral não encontrado em {url}.")
-    paragrafos = [" ".join(p.get_text(" ", strip=True).split()) for p in corpo.find_all("p")]
-    paragrafos = [p for p in paragrafos if p]
-
-    def e_titulo(p: str) -> bool:
-        return p == p.upper() and len(p) < 120 and any(c.isalpha() for c in p)
-
-    inicio = next((i for i, p in enumerate(paragrafos) if p.upper() == "INTRODUÇÃO"), None)
-    if inicio is None:
-        raise SystemExit(f"Seção INTRODUÇÃO não encontrada em {url}.")
-    trecho = []
-    for p in paragrafos[inicio + 1:]:
-        if e_titulo(p):
-            break
-        trecho.append(p)
-    if not trecho:
-        raise SystemExit(f"Introdução vazia em {url}.")
-    return " ".join(trecho)
 
 
 def numeros(texto: str) -> set[str]:

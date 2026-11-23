@@ -20,8 +20,8 @@ configurar_pagina("Fontes e método")
 
 st.title("Fontes e método")
 st.caption(
-    "De onde vêm os números deste painel e se os critérios de sucesso "
-    "do projeto estão sendo atendidos."
+    "De onde vêm os números do painel, as ressalvas de método e a "
+    "verificação dos critérios de sucesso, inclusive os do chat."
 )
 sobre_os_dados(
     "Hierarquia das fontes, ressalvas de método e fichas completas estão "
@@ -115,7 +115,35 @@ for item in itens:
     else:
         st.info(f"{item['criterio']} — {status}. {item['detalhe']}")
 
-st.markdown("### API local")
+st.markdown("### Critérios do chat com IA")
+st.markdown(
+    """
+O chat no fim das páginas Panorama setorial, Série histórica e Comparação internacional responde só com o que a
+página mostra. Como cada critério é conferido:
+
+- **Memória:** a segunda pergunta usa o contexto da primeira (últimas 6 trocas). Testado no código e observado
+  em 24 casos reais (`Data/modeled/chat_openai_casos.csv`).
+- **Números só dos dados:** o código confere cada resposta e a página avisa o que não estiver nas tabelas nem
+  for o resultado de uma conta com valores da resposta; as contas conferidas são exibidas. Coberto por teste
+  automático.
+- **Só dados da aplicação:** o contexto vem das tabelas da própria página, com os filtros aplicados; sem o CSV
+  do DataBank enviado, a Comparação internacional não tem dados nem chat. Coberto por teste automático.
+- **Fonte citada:** o código mostra, sob toda resposta, a fonte das tabelas enviadas ao modelo, sem depender de
+  ele citá-la. Coberto por teste automático.
+- **Falha da OpenAI ou da API:** mensagem clara no chat (503, 429, 502, 504), e, com a API fora do ar, o aviso com o
+  comando para subi-la; a página não cai. Coberto por teste automático.
+
+Funcionamento e chave da OpenAI: README, seção 4.
+"""
+)
+
+st.markdown("### Referências")
+st.markdown(
+    "Citações completas em Docs/Referencias.md. A literatura entra na "
+    "validação cruzada do Data Summary Report, fora dos gráficos."
+)
+
+st.markdown("### Informações técnicas (API local)")
 base = url_api()
 st.caption(f"URL da API: `{base}` (padrão local; sobrescreva com API_URL em secrets).")
 if api_disponivel():
@@ -123,7 +151,8 @@ if api_disponivel():
     st.link_button("Abrir /docs (Swagger)", f"{base}/docs")
 else:
     st.warning(
-        "A API não está no ar. Na raiz do repositório, em outro terminal, rode:\n\n"
+        "A API não está no ar. O painel tenta subi-la sozinho ao abrir; se ela não respondeu, na raiz do "
+        "repositório, em outro terminal, rode:\n\n"
         f"`{COMANDO_UVICORN}`\n\n"
         "Início, Série histórica, Comparação internacional e Corpus e resumos "
         "passam a ler os dados direto (SIDRA, Ipeadata, CSV enviado e Data/raw/)."
@@ -136,12 +165,7 @@ O que cada página consome quando a API está no ar:
 - **Série histórica:** GET /serie/transformacao.
 - **Comparação internacional:** POST /world-bank (CSV do DataBank) e GET /world-bank/{id}.
 - **Corpus e resumos:** GET /ods9/metas.
+- **Chat (Panorama setorial, Série histórica e Comparação internacional):** POST /chat (só funciona com a API no ar).
 - **Panorama setorial:** SIDRA direto (não passa pela API).
 """
-)
-
-st.markdown("### Referências")
-st.markdown(
-    "Citações completas em Docs/Referencias.md. A literatura entra na "
-    "validação cruzada do Data Summary Report, fora dos gráficos."
 )

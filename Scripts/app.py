@@ -3,11 +3,14 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from cliente_api import obter, quadro, legenda_origem
+from cliente_api import garantir_api, obter, quadro, legenda_origem
 from dados import ANO_QUEBRA_SCN, CODIGO_IPEA, fatos_resumo, serie_transformacao
-from interface import configurar_pagina, grafico_linha, sobre_os_dados
+from interface import configurar_pagina, faixa_ciclo, grafico_linha, sobre_os_dados
 
 ARQ_ODS9_IMG = Path(__file__).resolve().parent / "assets" / "ods9.webp"
+
+# O painel sobe a API junto, se ela for local e ainda não estiver no ar (a primeira abertura leva uns 20 s a mais).
+garantir_api()
 
 
 def _fallback_serie() -> dict:
@@ -113,6 +116,9 @@ def mostrar_inicio() -> None:
         "GET /serie/transformacao quando a API está no ar."
     )
 
+    st.subheader("Do dado ao insight")
+    faixa_ciclo()
+
     st.subheader("Páginas do painel")
 
     atalhos = [
@@ -120,7 +126,7 @@ def mostrar_inicio() -> None:
         (historico, "Série anual do Ipeadata, no maior período disponível."),
         (internacional, "World Bank, a partir do CSV enviado pelo usuário."),
         (ods9, "Texto do Ipea, nuvem de palavras, frequência e corpus."),
-        (fontes, "Links oficiais, hierarquia das fontes, ressalvas e API local."),
+        (fontes, "Links oficiais, hierarquia das fontes, ressalvas, critérios de sucesso (inclusive os do chat) e API local."),
     ]
 
     for comeco in (0, 3):
@@ -133,18 +139,18 @@ def mostrar_inicio() -> None:
 
 
 inicio = st.Page(mostrar_inicio, title="Início", default=True)
-panorama = st.Page("pages/1_Panorama_setorial.py", title="Panorama setorial")
-historico = st.Page("pages/2_Serie_historica.py", title="Série histórica")
+panorama = st.Page("pages/1_Panorama_setorial.py", title="SIDRA (Panorama Setorial)")
+historico = st.Page("pages/2_Serie_historica.py", title="IPEA (Série Histórica)")
 internacional = st.Page(
-    "pages/3_Comparacao_internacional.py", title="Comparação internacional"
+    "pages/3_Comparacao_internacional.py", title="Comparação Internacional"
 )
 ods9 = st.Page("pages/4_Corpus_e_resumos.py", title="Corpus e resumos")
 fontes = st.Page("pages/5_Fontes_e_metodo.py", title="Fontes e método")
 
 pg = st.navigation(
     {
-        "Painel": [inicio, panorama, historico],
-        "Comparações e contexto": [internacional, ods9],
+        "Painel": [inicio, panorama, historico, internacional],
+        "Contexto": [ods9],
         "Método": [fontes],
     }
 )

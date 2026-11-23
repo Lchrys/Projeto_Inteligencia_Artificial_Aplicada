@@ -1,27 +1,34 @@
 # API do monitor (FastAPI)
 
-Este README foi redigido com apoio de IA (Claude Opus 5.5 e Claude Haiku 5.5) e revisado pelo autor.
+Este README foi redigido com apoio de IA (Claude Opus 5.5, Claude Haiku 5.5 e Claude Sonnet 5.5) e revisado pelo autor.
 
 API local para consultar as séries oficiais e os textos do ODS 9, e para
 receber o CSV do DataBank. O painel consome estas rotas em Início, Série
 histórica, Comparação internacional e Corpus e resumos
-(`Scripts/cliente_api.py`). Se o serviço não responder, as páginas leem
-direto de `Scripts/nucleo.py`. O Streamlit Community Cloud não sobe esta API.
+(`Scripts/cliente_api.py`) e, no TP5, o chat com IA das páginas Panorama setorial, Série histórica e Comparação
+internacional (`POST /chat`). Se o serviço não responder, as páginas de dados leem
+direto de `Scripts/nucleo.py`; o chat e a aba Resumo exigem a API.
 
 Organização (padrão da disciplina): `main.py` cria a aplicação;
 `models.py` declara os modelos Pydantic de entrada e saída
-(`response_model` em todas as rotas); `routers/` separa séries, ODS 9 e análise de texto.
-A série do Ipeadata fica em cache de uma hora.
+(`response_model` em todas as rotas); `routers/` separa séries, ODS 9, análise de texto e chat.
+A série do Ipeadata fica em cache de uma hora. Dois arquivos de apoio: `_paths.py` põe `Scripts/` no `sys.path`, para a
+API importar o `nucleo`; `util.py` converte DataFrames em JSON (`registros`). Os erros comuns ficam em `erros.py`.
 
 Documentação interativa gerada pelo FastAPI: http://127.0.0.1:8000/docs
 
 ## Como subir (Windows, na raiz do repositório)
 
+Não é preciso subir a API à mão para usar o painel: `.venv\Scripts\python.exe -m streamlit run Scripts/app.py` a sobe
+junto, se ela ainda não estiver no ar, e a encerra quando o painel termina (a saída da API vai para `monitor_api.log`,
+na pasta temporária do Windows). Para rodar a API à parte, por exemplo com `--reload`, que a recarrega a cada arquivo
+salvo:
+
 ```
 .venv\Scripts\python.exe -m uvicorn Code.api.main:app --reload
 ```
 
-O serviço fica em http://127.0.0.1:8000. Em outro terminal, `.venv\Scripts\python.exe -m streamlit run Scripts/app.py`.
+O serviço fica em http://127.0.0.1:8000.
 
 A URL pode ser alterada no painel por `API_URL` em `.streamlit/secrets.toml`.
 O padrão é `http://127.0.0.1:8000`.
@@ -85,8 +92,7 @@ O ranking é a posição do Brasil entre as economias do CSV de exemplo do
 DataBank (`Data/raw/world_bank_setorial.csv`) no último ano com valor do
 Brasil — não um ranking mundial. O JSON traz `universo`,
 `paises_no_arquivo`, `paises_com_valor_no_ano`, `paises_sem_valor_no_ano` e
-`nota`. A página Início consome esta rota. Ainda não é usado pelo modelo de
-linguagem; num relatório futuro, o modelo só redigiria a partir deste JSON. Resposta: `FatosOut`.
+`nota`. A página Início consome esta rota. Resposta: `FatosOut`.
 
 ```
 curl http://127.0.0.1:8000/fatos/resumo
@@ -118,6 +124,37 @@ Tempo medido na máquina de
 referência (Intel Core i5-1035G1, 8 GB de RAM, sem GPU): de 12 s a 38 s por
 resumo, com mediana de 26 s.
 
+### POST /chat
+
+Chat com memória (TP5): responde só com as tabelas que a página mostra e que o cliente envia em `contexto`. Chama o
+assistente de `Code/modeling/assistente.py`, que usa a **API da OpenAI** (`gpt-4.1-mini`, trocável por
+`OPENAI_MODEL`) e confere por código os números da resposta. A API lê a chave de `OPENAI_API_KEY` (ambiente ou
+`.env` na raiz); nunca a devolve. A API não guarda conversa: o cliente envia o `historico` a cada pedido. A resposta
+foi gerada por modelo e precisa de revisão humana.
+
+```
+curl -X POST http://127.0.0.1:8000/chat ^
+  -H "Content-Type: application/json" ^
+  -d "{\"pergunta\": \"Qual o valor em 2010?\", \"contexto\": \"Fonte: Ipeadata\nano,valor\n2010,14.97\n1995,16.81\"}"
+```
+
+**Entrada** (`PedidoChat`): `pergunta`, de 1 a 500 caracteres (sem contar espaços nas pontas); `historico`, até 40
+falas (`MensagemChat`: `papel` `user` ou `assistant`, e `conteudo`, até 5.000 caracteres), opcional; e `contexto`, de 1 a
+150.000 caracteres. Campo a mais, pergunta vazia ou longa, papel inválido ou contexto vazio respondem **422**.
+
+**Saída** (`RespostaChat`, 200): `resposta`, `motor` (o modelo da OpenAI), `numeros_nao_verificados` (números que
+não estão nas tabelas, na pergunta nem são o resultado de uma conta), `contas_conferidas` (por exemplo
+`"1,11 = 14,97 − 13,86"`), `fontes` (a fonte de cada tabela enviada) e `aviso`.
+
+| Código | Quando | O que o cliente vê |
+|---|---|---|
+| 422 | entrada fora do contrato | lista de problemas, um item por campo |
+| 429 | limite de uso ou crédito da OpenAI esgotado | frase em `detail` |
+| 502 | a OpenAI recusou a chave, falhou, ficou sem internet ou devolveu resposta vazia | frase em `detail` |
+| 503 | a chave da OpenAI não está configurada na máquina da API | frase em `detail` |
+| 504 | a OpenAI não respondeu em 60 s | frase em `detail` |
+| 500 | erro inesperado | frase com um código de rastreio |
+
 ## Ambiente do modelo de linguagem
 
 Bibliotecas usadas pelo modelo de linguagem e pela API:
@@ -129,7 +166,7 @@ Bibliotecas usadas pelo modelo de linguagem e pela API:
 - `fastapi` e `uvicorn`: a API e o servidor que a executa.
 
 1. Instalar as dependências (Python 3.12, 3.13 ou 3.14; o 3.15 não serve, porque o pandas 3.0.5 não tem pacote pronto para ele). O `requirements.txt` aponta o `torch` para a versão
-   só de CPU do PyTorch (`--extra-index-url`), para o build no Streamlit Cloud
+   só de CPU do PyTorch (`--extra-index-url`), para a instalação
    não baixar a versão com CUDA.
    ```
    pip install -r requirements.txt
@@ -186,7 +223,8 @@ API mostra o mesmo código, junto do traceback completo.
 .venv\Scripts\python.exe -m unittest discover -s Code/api/tests -t .
 ```
 Os testes usam um modelo falso e cobrem 422, 502, 503, 504, 500 e o formato da
-resposta 200.
+resposta 200. Os da rota `POST /chat` (`test_chat.py`) usam uma OpenAI simulada, sem rede nem chave, e cobrem 200, 422,
+429, 502, 503, 504, 500, o cliente do painel e a mensagem do chat quando a API falha.
 
 **Teste com o modelo real** (integração de fato; demora cerca de 1 minuto):
 ```
@@ -201,7 +239,7 @@ texto de origem. Sem a variável, esses 4 testes são pulados.
 
 Os modelos de erro e o tratamento de erros inesperados estão em `Code/api/erros.py`.
 A rota de texto (`Code/api/routers/texto.py`) declara os códigos 502, 503 e 504 no
-`/docs`, e o 500 é declarado em toda a API.
+`/docs`, a do chat (`Code/api/routers/chat.py`) declara 429, 502, 503 e 504, e o 500 é declarado em toda a API.
 
 ## Variável MODELO_RESUMO
 

@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from Code.api import _paths  # noqa: F401
 from Code.api.erros import erro, erro_inesperado
 from Code.api.models import SaudeOut
-from Code.api.routers import ods9, series, texto
+from Code.api.routers import chat, ods9, series, texto
 
 
 @asynccontextmanager
@@ -24,11 +24,12 @@ app = FastAPI(
         "API local (FastAPI) para consultar as séries oficiais do indicador "
         "9.2.1 e os textos do ODS 9, e para receber o CSV do DataBank. "
         "O painel Streamlit consome estas rotas quando a API está no ar "
-        "(Início, Série histórica, Comparação internacional e Corpus e resumos). "
+        "(Início, Série histórica, Comparação internacional e Corpus e resumos) "
+        "e o chat com IA das páginas Panorama setorial, Série histórica e Comparação internacional (POST /chat). "
         "Documentação interativa em /docs. Modelos de resposta em "
         "Code/api/models.py."
     ),
-    version="0.4.0",
+    version="0.5.0",
     lifespan=lifespan,
     # Documenta o 500 em todas as rotas: qualquer uma pode falhar por um motivo imprevisto.
     responses={500: erro("Erro interno, com um código para informar a quem mantém a API.")},
@@ -40,6 +41,7 @@ app.add_exception_handler(Exception, erro_inesperado)
 app.include_router(series.router)
 app.include_router(ods9.router)
 app.include_router(texto.router)
+app.include_router(chat.router)
 
 
 @app.get(

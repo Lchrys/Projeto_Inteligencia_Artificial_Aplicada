@@ -111,6 +111,27 @@ def grafico_linha(
     st.altair_chart(alt.layer(*camadas).configure_axis(grid=True), width="stretch")
 
 
+ETAPAS_CICLO = (
+    ("Coleta", "SIDRA, Ipeadata e World Bank; scraping do ODS 9"),
+    ("Processamento", "Limpeza, formato longo, quebra de 1995"),
+    ("Análise", "Fatos calculados pelo código"),
+    ("IA", "Chat com memória em cada página (OpenAI)"),
+    ("Apresentação", "Gráficos, tabelas e chat na mesma página"),
+)
+
+
+def faixa_ciclo(etapa_atual: int | None = None) -> None:
+    """Mostra as cinco etapas do ciclo de dados; destaca a etapa atual."""
+    colunas = st.columns(len(ETAPAS_CICLO))
+    for indice, (coluna, (titulo, descricao)) in enumerate(
+        zip(colunas, ETAPAS_CICLO), start=1
+    ):
+        with coluna:
+            rotulo = f"{indice}\\. {titulo}"
+            st.markdown(f"**{rotulo}**" if indice == etapa_atual else rotulo)
+            st.caption(descricao)
+
+
 def aviso_quebra(inicio: int, fim: int) -> None:
     if inicio < ANO_QUEBRA_SCN <= fim:
         st.warning(

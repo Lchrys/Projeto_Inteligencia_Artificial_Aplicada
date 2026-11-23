@@ -33,7 +33,7 @@
 - Com 7,74 GB utilizáveis, sobram cerca de 1,5 GB para o Windows, o Python, o cache de ativações e a própria execução. A folga não é suficiente.
 - Quando a memória esgota, o sistema passa a paginar pesos pelo disco. Cada token passa a levar muito mais tempo, e a CPU fica ocupada com a troca de páginas, e não com a geração.
 
-**Conclusão:** o problema é de limite de hardware, e não de código. O modelo só seria viável nesta máquina com precisão menor (bfloat16 ou int8), o que não foi testado, ou com mais memória.
+**Conclusão:** o problema é de limite de hardware, e não de código. Nesta máquina o modelo só caberia com precisão menor (bfloat16 ou int8) ou com mais memória; o projeto seguiu a outra saída, a de escolher um modelo menor (Qwen3-0.6B).
 
 **Limites deste registro:** a causa é inferida a partir dos sintomas (memória esgotada, carregamento lento e consumo total da CPU). Não houve medição do uso de memória durante a geração nem do tempo por token.
 
@@ -95,7 +95,7 @@ Banco: 7 justificativas de metas do ODS 9 (com pelo menos 150 caracteres) e 3 re
 
 - **Tempo por resumo:** mediana de 19,8 s e pior caso de 33 s. O total ficou em cerca de 3,5 minutos.
 - **Memória de pico:** 2,45 GB.
-- **Fidelidade numérica:** só 3 dos 10 resumos têm números, e nos 3 todos os números aparecem no texto de origem. Amostra pequena demais para concluir algo.
+- **Fidelidade numérica:** só 3 dos 10 resumos têm números, e nos 3 todos os números aparecem no texto de origem. A conclusão vale só para esses 3 textos.
 - **Qualidade:** os resumos são em português e, na leitura, acompanham o conteúdo de cada texto. A checagem de um dado específico (Pintec e ENCTI, meta 9.5) confirmou que estava na origem.
 
 Falhas encontradas:
@@ -120,7 +120,7 @@ Correções aplicadas: instrução no prompt para ignorar códigos de classifica
 
 ### Rodada com a introdução do Oreiro e Feijó (2010)
 
-O abstract em inglês do Oreiro e Feijó foi substituído pela introdução em português, lida diretamente da página do SciELO a cada execução. O texto da introdução não é gravado no projeto; o CSV guarda só o resumo gerado.
+O abstract em inglês do Oreiro e Feijó foi substituído pela introdução em português, extraída da página do SciELO, salva em `Data/raw/oreiro_feijo_2010_introducao.txt` e lida desse arquivo a cada execução. O CSV de medição guarda só o resumo gerado.
 
 - **Tempo:** mediana de 26,0 s por resumo e pior caso de 38,1 s.
 - **Memória:** pico de 2,41 GB.
@@ -136,7 +136,7 @@ O erro é do tipo que o monitor não pode aceitar: a palavra "transformação" �
 
 **Decisão:** o Qwen3-0.6B foi aceito como modelo do projeto, com estes limites:
 1. Textos em inglês podem gerar resumos que repetem o título, como no caso do Oreiro e Feijó. Quando o alerta `curto` aparece, o resumo deve ser lido com desconfiança antes de qualquer uso.
-2. A checagem numérica depende de textos com números. Só 3 dos 10 textos testados têm números, então a fidelidade ainda não está bem medida.
+2. A checagem numérica depende de textos com números. Só 3 dos 10 textos têm números, então a fidelidade numérica medida vale para esses 3.
 3. O banco tem 10 textos, medidos numa única máquina.
 
 ## 3. Justificativas da decisão
@@ -168,7 +168,7 @@ O erro é do tipo que o monitor não pode aceitar: a palavra "transformação" �
 
 A descrição completa está em `Code/api/README.md`. Resumo dos passos:
 
-1. **Ambiente:** `pip install -r requirements.txt`. Bibliotecas: `transformers` (carregar e gerar), `torch` (execução, versão de CPU), `huggingface_hub` (download), `psutil` (medição de memória, só na medição) e `httpx` (testes). A lista completa está em `Code/api/README.md`. O `torch` é a versão só de CPU, apontada por `--extra-index-url` no próprio arquivo, para o build no Streamlit Cloud não baixar CUDA.
+1. **Ambiente:** `pip install -r requirements.txt`. Bibliotecas: `transformers` (carregar e gerar), `torch` (execução, versão de CPU), `huggingface_hub` (download), `psutil` (medição de memória, só na medição) e `httpx` (testes). A lista completa está em `Code/api/README.md`. O `torch` é a versão só de CPU, apontada por `--extra-index-url` no próprio arquivo, para a instalação não baixar CUDA.
 2. **Download:** `.venv\Scripts\python.exe Code/modeling/baixar_modelo.py` baixa `Qwen/Qwen3-0.6B` (cerca de 1,5 GB) para o cache do Hugging Face, fora do Git.
 3. **Carga na subida:** `Code/api/main.py` tem um `lifespan` que chama `carregar_na_subida()`. O modelo é lido do disco com `local_files_only=True`, em float32 na CPU. Se a carga falhar, a API sobe mesmo assim e só `POST /processar_texto` responde 503.
 4. **Rota:** `Code/api/routers/texto.py` declara a rota com `def`, porque a geração calcula na CPU e bloquearia o laço assíncrono. A geração roda numa thread separada, com tempo limite de 120 s (504).
@@ -182,7 +182,7 @@ A descrição completa está em `Code/api/README.md`. Resumo dos passos:
 
 Este projeto usou ferramentas de IA, conforme o enunciado exige citar:
 
-- **Ferramenta:** Claude (Anthropic), modelos Claude Opus 5.5 e Claude Haiku 5.5, usados no Claude Code, em conversa com o autor.
+- **Ferramenta:** Claude (Anthropic), modelos Claude Opus 5.5, Claude Haiku 5.5 e Claude Sonnet 5.5, usados no Claude Code, em conversa com o autor.
 - **Para quê:** planejamento das etapas, escrita de código (scrapers, módulos de modelo, rotas, testes), redação da documentação e revisão de textos.
 - **Verificação:** o autor conferiu os resultados. O código foi executado e os testes foram rodados; os resumos do modelo foram lidos e comparados com os textos de origem, e os erros encontrados estão registrados na seção 3.
 - **Responsabilidade:** as decisões de escopo, de fonte e de modelo são do autor, e o modelo gerou apenas os resumos avaliados aqui.

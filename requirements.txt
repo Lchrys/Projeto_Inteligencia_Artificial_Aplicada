@@ -8,7 +8,7 @@ matplotlib==3.11.2
 fastapi==0.143.0
 uvicorn==0.53.0
 # Modelo de linguagem local (TP4). O torch vem da versão só de CPU do PyTorch,
-# para o build no Streamlit Cloud (Linux) não baixar a versão com CUDA.
+# para a instalação não baixar a versão com CUDA.
 --extra-index-url https://download.pytorch.org/whl/cpu
 python-multipart==0.0.32
 torch==2.15.0

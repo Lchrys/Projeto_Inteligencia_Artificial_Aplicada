@@ -1,7 +1,9 @@
 import pandas as pd
 import streamlit as st
 
+from chat_pagina import chat_da_pagina
 from cliente_api import obter, quadro, legenda_origem
+from contextos import contexto_serie
 from dados import ANO_QUEBRA_SCN, CODIGO_IPEA, data_consulta, serie_transformacao
 from interface import (
     aviso_quebra,
@@ -12,9 +14,9 @@ from interface import (
     sobre_os_dados,
 )
 
-configurar_pagina("Série histórica")
+configurar_pagina("IPEA (Série Histórica)")
 
-st.title("Série histórica")
+st.title("IPEA (Série Histórica)")
 st.caption(
     "Qual foi a trajetória da indústria de transformação no PIB brasileiro "
     "no maior período disponível."
@@ -42,6 +44,8 @@ if not serie.empty and "ano" in serie.columns:
     serie["ano"] = pd.to_numeric(serie["ano"], errors="coerce")
     serie["valor"] = pd.to_numeric(serie.get("valor"), errors="coerce")
     serie = serie.dropna(subset=["ano"]).sort_values("ano")
+
+intervalo = None  # o assistente vê o que a tela mostra: o recorte do slider
 
 if not serie.empty:
     anos = serie["ano"].dropna()
@@ -91,3 +95,14 @@ botao_download(
     codigo_serie=CODIGO_IPEA,
     data_extracao=data_consulta(),
 )
+
+if not serie.empty and "valor" in serie.columns:
+    chat_da_pagina(
+        "serie",
+        contexto_serie(serie.dropna(subset=["valor"]), intervalo),
+        sugestoes=(
+            "A indústria de transformação perdeu participação no PIB desde 1995?",
+            "Qual foi o maior valor da série e em que ano?",
+            "Qual era o valor em 2010?",
+        ),
+    )

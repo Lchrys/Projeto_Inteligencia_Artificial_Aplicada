@@ -148,3 +148,85 @@ class ResultadoResumo(BaseModel):
     resumo: str = Field(min_length=1, description="O resumo gerado pelo modelo.")
     motor: str = Field(description="Qual modelo gerou o resumo (nome no Hugging Face).")
     aviso: str = Field(description="Ressalva sobre o resultado: foi gerado por modelo e precisa de revisão.")
+
+
+# ---------------------------------------------------------------- chat com memória (TP5)
+MAX_CARACTERES_PERGUNTA = 500
+MAX_CARACTERES_MENSAGEM = 5000
+MAX_MENSAGENS_HISTORICO = 40
+MAX_CARACTERES_CONTEXTO = 150_000
+
+
+class MensagemChat(BaseModel):
+    """Uma fala da conversa: do usuário (`user`) ou do assistente (`assistant`)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    papel: Literal["user", "assistant"] = Field(description="Quem falou.")
+    conteudo: str = Field(
+        min_length=1,
+        max_length=MAX_CARACTERES_MENSAGEM,
+        description=f"O texto da fala, até {MAX_CARACTERES_MENSAGEM} caracteres.",
+    )
+
+
+class PedidoChat(BaseModel):
+    """O que a API ACEITA em POST /chat. Campo a mais é recusado (422)."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "pergunta": "E em 2010?",
+                    "historico": [
+                        {"papel": "user", "conteudo": "A indústria perdeu participação desde 1995?"},
+                        {"papel": "assistant", "conteudo": "Sim, de 16,81% em 1995 para 11,77% em 2025."},
+                    ],
+                    "contexto": "### Participação da indústria de transformação no PIB do Brasil\n"
+                                "Fonte: Ipeadata\nano,% do PIB\n2025,11.77\n2010,14.97\n1995,16.81",
+                }
+            ]
+        },
+    )
+
+    pergunta: str = Field(
+        min_length=1,
+        max_length=MAX_CARACTERES_PERGUNTA,
+        description=f"A pergunta do usuário, até {MAX_CARACTERES_PERGUNTA} caracteres.",
+    )
+    historico: list[MensagemChat] = Field(
+        default_factory=list,
+        max_length=MAX_MENSAGENS_HISTORICO,
+        description="As falas anteriores da conversa, da mais antiga à mais recente. "
+        "Só as últimas 6 trocas seguem ao modelo.",
+    )
+    contexto: str = Field(
+        min_length=1,
+        max_length=MAX_CARACTERES_CONTEXTO,
+        description="As tabelas que a página mostra, em texto, com fonte e nota. "
+        "O assistente só responde com o que está aqui.",
+    )
+
+    @field_validator("pergunta")
+    @classmethod
+    def pergunta_sem_espacos_nas_pontas(cls, valor: str) -> str:
+        limpo = valor.strip()
+        if not limpo:
+            raise ValueError("A pergunta não pode ficar em branco.")
+        return limpo
+
+
+class RespostaChat(BaseModel):
+    """O que a API PROMETE devolver em POST /chat (200)."""
+
+    resposta: str = Field(min_length=1, description="O texto do assistente.")
+    motor: str = Field(description="Qual modelo da OpenAI gerou a resposta.")
+    numeros_nao_verificados: list[str] = Field(
+        description="Números da resposta que não estão nas tabelas, na pergunta, nem são o resultado de uma conta."
+    )
+    contas_conferidas: list[str] = Field(
+        description='Contas que o código refez e confirmou, por exemplo "1,11 = 14,97 − 13,86".'
+    )
+    fontes: list[str] = Field(description="A fonte de cada tabela enviada, sem repetição.")
+    aviso: str = Field(description="Ressalva: a resposta foi gerada por modelo e precisa de revisão humana.")
