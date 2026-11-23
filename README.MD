@@ -140,31 +140,33 @@ o painel sobe a API sozinho ao abrir, e, se ela não subir, a página mostra o a
 não guarda conversa: o
 histórico fica no painel (`st.session_state`) e vai a cada pedido.
 
-**Fluxo completo, do dado ao insight** (em cada etapa, o arquivo onde ela acontece):
+**Fluxo, do dado ao insight** (em cada etapa, o arquivo onde ela acontece):
 
 ```mermaid
-flowchart TD
-    F["<b>1. Coleta</b><br/>Ipeadata (API) · IBGE SIDRA (API)<br/>World Bank (CSV enviado) · Ipea ODS 9 e referências (scraping)"]
-    N["<b>2. Processamento e análise</b><br/><code>Scripts/nucleo.py</code><br/>limpeza, formato longo, participações, quebra de 1995"]
-    A["<b>3. Acesso</b><br/>API FastAPI (<code>Code/api</code>) e <code>Scripts/cliente_api.py</code>"]
-    P["<b>4. Apresentação</b><br/><code>Scripts/app.py</code> e <code>Scripts/pages/</code> (6 páginas)<br/>gráficos, tabelas e filtros"]
-    C["<b>5. IA: chat com memória</b><br/><code>Scripts/contextos.py</code> e <code>Scripts/chat_pagina.py</code><br/>as tabelas da página, com os filtros, viram o contexto"]
-    L["<code>POST /chat</code> (<code>Code/api/routers/chat.py</code>)<br/><code>Code/modeling/assistente.py</code><br/>prompt, memória de 6 trocas, OpenAI, conferência dos números"]
-    R["<b>Resposta na página</b><br/>conta conferida, fonte das tabelas e dados enviados à vista"]
-    Q["<b>Resumo local (TP4)</b><br/>aba Resumo, <code>POST /processar_texto</code>, Qwen3-0.6B"]
+flowchart LR
+    F["<b>1. Coleta</b><br/>Ipeadata, SIDRA,<br/>World Bank, ODS 9"]
+    N["<b>2. Processamento</b><br/>e análise<br/><code>nucleo.py</code>"]
+    A["<b>3. Acesso</b><br/>API FastAPI<br/><code>cliente_api.py</code>"]
+    P["<b>4. Painel</b><br/><code>app.py</code> e<br/><code>pages/</code>"]
+    C["<b>5. Chat com IA</b><br/><code>contextos.py</code><br/><code>chat_pagina.py</code><br/><code>POST /chat</code><br/><code>assistente.py</code>"]
+    Q["<b>Resumo local</b><br/><code>POST /processar_texto</code><br/>Qwen3-0.6B"]
 
     F --> N --> A --> P
-    N -. "sem a API: leitura direta" .-> P
-    P --> C --> L --> R
+    N -. "sem a API" .-> P
+    P --> C
     P --> Q
 
     classDef dado fill:#eef2f7,stroke:#5b7083,color:#1b2733
     classDef ia fill:#e7f4ec,stroke:#3f8f5f,color:#12301f
     classDef lado fill:#f6f1e7,stroke:#a08440,color:#33290f
     class F,N,A,P dado
-    class C,L,R ia
+    class C ia
     class Q lado
 ```
+
+Sem a API, as páginas de dados leem direto de `nucleo.py`; o chat e o resumo exigem a API. No chat, o assistente
+aplica o prompt, a memória de 6 trocas e a conferência dos números por código (seção 4.3), e a resposta traz a conta
+conferida, a fonte das tabelas e os dados enviados à vista.
 
 ### 4.2 Como a solução resolve o problema de negócio (ESG e ODS)
 
